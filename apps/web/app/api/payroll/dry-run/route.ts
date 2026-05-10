@@ -1,26 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { authResponse, requireWalletPubkey } from "@/lib/auth";
 import { buildDryRun } from "@/lib/payroll/orchestrator";
-import { seedContractorsIfEmpty } from "@/lib/payroll/seed";
 
 export const runtime = "nodejs";
 
-const Schema = z.object({ contractorIds: z.array(z.string().min(1)).min(1) });
+const Body = z.object({ contractorIds: z.array(z.string()).min(1) });
 
 export async function POST(req: Request) {
-  seedContractorsIfEmpty();
-  const body = await req.json().catch(() => null);
-  const parsed = Schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-
-  const dry = buildDryRun(parsed.data.contractorIds);
-  // Re-serialize bigints as strings.
-  return NextResponse.json({
-    contractorIds: dry.contractorIds,
-    rows: dry.rows.map((r) => ({ ...r, lamports: r.lamports.toString() })),
-    totalUsd: dry.totalUsd,
-    totalLamports: dry.totalLamports.toString(),
-    ikaCoSignRequired: dry.ikaCoSignRequired,
-    ikaStub: dry.ikaStub,
-  });
+  try {
+    const pubkey = requireWalletPubkey(req);
+    const body = await req.json().catch(() => null);
+    const parsed = Body.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(buildDryRun(pubkey, parsed.data.contractorIds));
+  } catch (e) {
+    return authResponse(e);
+  }
 }

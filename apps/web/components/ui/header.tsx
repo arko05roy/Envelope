@@ -10,29 +10,22 @@ export function SiteHeader() {
           <span className="font-display text-[18px] tracking-tight">Envelope</span>
         </Link>
         <nav className="flex items-center gap-1">
-          <Link
-            href="/dashboard"
-            className="px-3 h-9 inline-flex items-center text-[13px] text-ink-2 hover:text-ink rounded hover:bg-paper-3 transition-colors duration-150"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/dashboard/payroll"
-            className="px-3 h-9 inline-flex items-center text-[13px] text-ink-2 hover:text-ink rounded hover:bg-paper-3 transition-colors duration-150"
-          >
-            Payroll
-          </Link>
-          <Link
-            href="/dashboard/audit"
-            className="px-3 h-9 inline-flex items-center text-[13px] text-ink-2 hover:text-ink rounded hover:bg-paper-3 transition-colors duration-150"
-          >
-            Audit
-          </Link>
+          <NavLink href="/dashboard">Dashboard</NavLink>
+          <NavLink href="/dashboard/contractors">People</NavLink>
+          <NavLink href="/dashboard/payroll">Payroll</NavLink>
           <span className="mx-2 h-5 w-px bg-rule" />
           <WalletButton />
         </nav>
       </div>
     </header>
+  );
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="px-3 h-9 inline-flex items-center text-[13px] text-ink-2 hover:text-ink rounded hover:bg-paper-3 transition-colors duration-150">
+      {children}
+    </Link>
   );
 }
 

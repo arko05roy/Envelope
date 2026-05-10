@@ -1,63 +1,53 @@
 /**
- * Ika dWallet SDK wrapper.
+ * Ika dWallet — pre-alpha integration.
  *
- * Install:  pnpm add @ika.xyz/sdk
- * Docs:     https://docs.ika.xyz  ·  https://docs.ika.xyz/docs/sdk
- * Status:   Solana Pre-Alpha live. EdDSA support shipped Dec 2025.
+ *   gRPC:        pre-alpha-dev-1.ika.ika-network.net:443
+ *   Solana RPC:  https://api.devnet.solana.com
+ *   Program ID:  87W54kGYFQ1rgWqMeu4XTPHWXWmXSQCcjm8vCTfiq1oY
  *
- * What we use:
- *   - createDWallet:    provision MPC keypair (user share + Ika network share)
- *   - signSolanaTx:     2PC-MPC sign for the dWallet's Solana custody
- *   - signCrossChain:   sign EVM/BTC payload for cross-chain treasury (pre-alpha — gate behind feature flag)
- *   - configurePolicy:  Solana program defines what can be signed under what conditions
+ * Full flow (per docs.solana-pre-alpha.ika.xyz) requires:
+ *   1. A custom Solana program with the `__ika_cpi_authority` PDA
+ *   2. CPI calls to `approve_message` from your program
+ *   3. The Ika network detects MessageApproval accounts and signs (mock signer in pre-alpha)
  *
- * Treasury model: dWallet IS the org's treasury account. KIRAPAY/Dodo pay-ins
- * settle to the dWallet's Solana ATA. Cloak batch disbursement is co-signed
- * by the dWallet. Cross-chain reserves (BTC/ETH) live under the same dWallet
- * with chain-specific signing.
+ * Until we ship the policy program, this client checks devnet liveness of the
+ * Ika program and returns its on-chain account state. That's enough for the UI
+ * to show real connection status, not a stub.
  */
+import { Connection, PublicKey } from "@solana/web3.js";
 
-// import * as Ika from "@ika.xyz/sdk"; // populate after `pnpm add @ika.xyz/sdk`
+export const IKA_PROGRAM_ID_DEVNET = new PublicKey(
+  "87W54kGYFQ1rgWqMeu4XTPHWXWmXSQCcjm8vCTfiq1oY",
+);
 
-export interface DWalletHandle {
-  id: string;
-  solanaPubkey: string;
-  evmAddress?: string;
-  btcAddress?: string;
+export const IKA_DEVNET_RPC = "https://api.devnet.solana.com";
+
+export interface IkaStatus {
+  ok: boolean;
+  programId: string;
+  rpc: string;
+  programOwner?: string;
+  programDataLen?: number;
 }
 
-export interface PolicyConfig {
-  /** Multi-sig: list of co-signer pubkeys + threshold. */
-  cosigners: { pubkey: string; weight: number }[];
-  threshold: number;
-  /** Spend caps per (token, period). */
-  spendCaps?: Array<{ token: string; periodSec: number; maxAmount: bigint }>;
-  /** Allowlisted destination programs / addresses (e.g. CLOAK_PROGRAM_ID). */
-  allowedDestinations?: string[];
-}
+let cached: { ts: number; status: IkaStatus } | null = null;
+const CACHE_MS = 60_000;
 
-export async function createDWallet(_userPubkey: string): Promise<DWalletHandle> {
-  // TODO(D2): Replace with @ika.xyz/sdk createDWallet flow.
-  // The 2PC-MPC handshake creates a user share locally + network share on Ika.
-  throw new Error("TODO: integrate Ika createDWallet");
-}
-
-export async function configurePolicy(_dWalletId: string, _policy: PolicyConfig): Promise<void> {
-  // TODO(D2): Deploy/init the Solana program that gates dWallet sign requests
-  // for this org. Pinocchio / Anchor / Native are all supported.
-  throw new Error("TODO: integrate Ika policy program");
-}
-
-export async function signSolanaTx(_dWalletId: string, _serializedTx: Uint8Array): Promise<Uint8Array> {
-  // TODO(D2): Returns the 2PC-MPC signed tx bytes ready for sendRawTransaction.
-  throw new Error("TODO: integrate Ika signSolanaTx");
-}
-
-export async function signCrossChain(
-  _dWalletId: string,
-  _chain: "ethereum" | "bitcoin",
-  _payload: Uint8Array,
-): Promise<Uint8Array> {
-  // Pre-alpha — gate behind feature flag. v1 demo focuses on Solana custody.
-  throw new Error("TODO(roadmap): cross-chain signing pending Ika pre-alpha stability");
+export async function getIkaStatus(): Promise<IkaStatus> {
+  if (cached && Date.now() - cached.ts < CACHE_MS) return cached.status;
+  const conn = new Connection(IKA_DEVNET_RPC, "confirmed");
+  try {
+    const info = await conn.getAccountInfo(IKA_PROGRAM_ID_DEVNET, "confirmed");
+    const status: IkaStatus = {
+      ok: !!info,
+      programId: IKA_PROGRAM_ID_DEVNET.toBase58(),
+      rpc: IKA_DEVNET_RPC,
+      programOwner: info?.owner.toBase58(),
+      programDataLen: info?.data.length,
+    };
+    cached = { ts: Date.now(), status };
+    return status;
+  } catch {
+    return { ok: false, programId: IKA_PROGRAM_ID_DEVNET.toBase58(), rpc: IKA_DEVNET_RPC };
+  }
 }

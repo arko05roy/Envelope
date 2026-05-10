@@ -1,112 +1,106 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { SiteHeader } from "@/components/ui/header";
 import { Button, Card, Eyebrow, HRule, Label, Pill } from "@/components/ui/primitives";
-import type { Contractor } from "@/lib/store";
+import { ConnectWalletState, EmptyState } from "@/components/ui/empty-state";
+import { useOrg } from "@/lib/hooks/useOrg";
+import { api } from "@/lib/api/fetcher";
+import type { Contractor, PayrollRunRecord } from "@/lib/store";
 
 interface DryRun {
+  rows: Array<{ id: string; name: string; monthlyUsd: number; lamports: string; encryptCiphertextId?: string }>;
   totalUsd: number;
   totalLamports: string;
-  ikaCoSignRequired: boolean;
-  ikaStub: true;
-  rows: Array<{
-    id: string;
-    name: string;
-    monthlyUsd: number;
-    lamports: string;
-    encryptThresholdPasses: boolean;
-    encryptStub: true;
-  }>;
-}
-
-interface ExecResult {
-  runId: string;
-  totalLamports: string;
-  totalChunks: number;
-  network: "devnet" | "mainnet-beta";
-  cloakLive: boolean;
-  recipients: Array<{
-    id: string;
-    name: string;
-    monthlyUsd: number;
-    lamports: string;
-    claimUrl: string;
-    chunkIndex: number;
-  }>;
-  chunks: Array<{ index: number; recipientIds: string[]; txResult: unknown; simulated?: true }>;
-  notes: { encrypt: string; ika: string; cloak: string };
+  chunks: number;
 }
 
 export default function PayrollPage() {
+  const { connected, pubkey, org } = useOrg();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [dryRun, setDryRun] = useState<DryRun | null>(null);
+  const [dry, setDry] = useState<DryRun | null>(null);
   const [busy, setBusy] = useState<"dry" | "exec" | null>(null);
-  const [result, setResult] = useState<ExecResult | null>(null);
+  const [result, setResult] = useState<PayrollRunRecord | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/payroll/contractors")
-      .then((r) => r.json())
-      .then((j: { contractors: Contractor[] }) => {
+    if (!pubkey) return;
+    api<{ contractors: Contractor[] }>(pubkey, "/api/contractors")
+      .then((j) => {
         setContractors(j.contractors);
         setSelected(new Set(j.contractors.map((c) => c.id)));
-      });
-  }, []);
+      })
+      .catch((e: Error) => setErr(e.message));
+  }, [pubkey]);
 
   const totalUsd = useMemo(
     () => contractors.filter((c) => selected.has(c.id)).reduce((s, c) => s + c.monthlyUsd, 0),
     [contractors, selected],
   );
 
+  if (!connected) {
+    return <Wrap><ConnectWalletState /></Wrap>;
+  }
+  if (!org?.name) {
+    return (
+      <Wrap>
+        <EmptyState
+          title="Finish onboarding first"
+          action={<Link href="/dashboard"><Button variant="primary">Open dashboard</Button></Link>}
+        />
+      </Wrap>
+    );
+  }
+  if (contractors.length === 0) {
+    return (
+      <Wrap>
+        <EmptyState
+          title="Add contractors first"
+          description="Payroll needs people. Add the team you want to pay."
+          action={<Link href="/dashboard/contractors"><Button variant="primary">+ Add contractors</Button></Link>}
+        />
+      </Wrap>
+    );
+  }
+
   const toggle = (id: string) => {
     const s = new Set(selected);
-    if (s.has(id)) s.delete(id);
-    else s.add(id);
+    s.has(id) ? s.delete(id) : s.add(id);
     setSelected(s);
-    setDryRun(null);
+    setDry(null);
     setResult(null);
   };
 
-  const selectAll = () => setSelected(new Set(contractors.map((c) => c.id)));
-  const selectNone = () => setSelected(new Set());
-
-  const doDryRun = async () => {
+  const doDry = async () => {
     setBusy("dry");
     setErr(null);
     try {
-      const r = await fetch("/api/payroll/dry-run", {
+      const j = await api<DryRun>(pubkey, "/api/payroll/dry-run", {
         method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({ contractorIds: [...selected] }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error?.formErrors?.[0] ?? "dry-run failed");
-      setDryRun(j as DryRun);
+      setDry(j);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "failed");
+      setErr(e instanceof Error ? e.message : "Failed");
     } finally {
       setBusy(null);
     }
   };
 
-  const doExecute = async () => {
-    if (!confirm(`Execute payroll for ${selected.size} contractors? This will fire a real Cloak shielded batch on Solana devnet.`))
-      return;
+  const doRun = async () => {
+    if (!confirm(`Run payroll for ${selected.size} ${selected.size === 1 ? "person" : "people"}? This fires a real shielded batch.`)) return;
     setBusy("exec");
     setErr(null);
     try {
-      const r = await fetch("/api/payroll/run", {
+      const j = await api<PayrollRunRecord>(pubkey, "/api/payroll/run", {
         method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({ contractorIds: [...selected] }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "execution failed");
-      setResult(j as ExecResult);
+      setResult(j);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "failed");
+      setErr(e instanceof Error ? e.message : "Failed");
     } finally {
       setBusy(null);
     }
@@ -115,42 +109,26 @@ export default function PayrollPage() {
   return (
     <>
       <SiteHeader />
-
       <main className="mx-auto max-w-6xl px-6 py-12">
         <header className="flex items-end justify-between gap-6 flex-wrap">
           <div>
             <Eyebrow>Payroll</Eyebrow>
             <h1 className="mt-4 font-display text-[42px] leading-none tracking-tighter">
-              Run May 2026
+              Run
             </h1>
             <p className="mt-3 text-[14px] text-ink-2">
-              {selected.size} of {contractors.length} contractors ·{" "}
-              <span className="num text-ink">${totalUsd.toLocaleString()}</span> selected ·{" "}
-              <Pill tone="warning">Encrypt FHE · pre-alpha plaintext</Pill>{" "}
-              <Pill tone="warning">Ika co-sign · pre-alpha stub</Pill>{" "}
-              <Pill tone="positive">Cloak · live mainnet/devnet</Pill>
+              {selected.size} of {contractors.length} selected ·{" "}
+              <span className="num text-ink">${totalUsd.toLocaleString()}</span>
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={selectNone}>
-              Clear
+            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set(contractors.map((c) => c.id)))}>Select all</Button>
+            <Button variant="secondary" onClick={doDry} disabled={busy !== null || selected.size === 0}>
+              {busy === "dry" ? "Calculating…" : "Dry run"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={selectAll}>
-              Select all
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={doDryRun}
-              disabled={busy !== null || selected.size === 0}
-            >
-              {busy === "dry" ? "Dry-running…" : "Dry run"}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={doExecute}
-              disabled={busy !== null || !dryRun || dryRun.rows.some((r) => !r.encryptThresholdPasses)}
-            >
-              {busy === "exec" ? "Shielding batch…" : `Run shielded batch ↗`}
+            <Button variant="primary" onClick={doRun} disabled={busy !== null || !dry}>
+              {busy === "exec" ? "Settling…" : "Send shielded payroll"}
             </Button>
           </div>
         </header>
@@ -162,94 +140,55 @@ export default function PayrollPage() {
         )}
 
         <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Contractor table */}
           <Card className="lg:col-span-8 p-0 overflow-hidden">
-            <div className="px-5 py-4 border-b border-rule flex items-center justify-between">
-              <Label>Comp matrix</Label>
-              <span className="text-[12px] text-ink-3 font-mono">
-                {contractors.length} rows · plaintext (pre-alpha){" "}
-              </span>
-            </div>
             <div className="max-h-[560px] overflow-auto">
               <table className="w-full text-[13px]">
                 <thead className="text-[11px] uppercase tracking-[0.1em] text-ink-3">
                   <tr className="border-b border-rule">
-                    <th className="text-left font-medium px-5 py-2.5 w-8"></th>
-                    <th className="text-left font-medium px-3 py-2.5">ID</th>
-                    <th className="text-left font-medium px-3 py-2.5">Name</th>
-                    <th className="text-left font-medium px-3 py-2.5">Country</th>
-                    <th className="text-left font-medium px-3 py-2.5">Role</th>
-                    <th className="text-right font-medium px-5 py-2.5">Monthly</th>
+                    <th className="text-left font-medium px-5 py-3 w-8"></th>
+                    <th className="text-left font-medium px-3 py-3">Name</th>
+                    <th className="text-left font-medium px-3 py-3">Country</th>
+                    <th className="text-left font-medium px-3 py-3">Role</th>
+                    <th className="text-left font-medium px-3 py-3">Sealed</th>
+                    <th className="text-right font-medium px-5 py-3">Monthly</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {contractors.map((c) => {
-                    const dry = dryRun?.rows.find((r) => r.id === c.id);
-                    const passes = dry ? dry.encryptThresholdPasses : true;
-                    return (
-                      <tr
-                        key={c.id}
-                        onClick={() => toggle(c.id)}
-                        className={`cursor-pointer border-b border-rule/60 hover:bg-paper-3 transition-colors duration-100 ${
-                          selected.has(c.id) ? "bg-paper-3/60" : ""
-                        }`}
-                      >
-                        <td className="px-5 py-2.5">
-                          <input
-                            type="checkbox"
-                            checked={selected.has(c.id)}
-                            onChange={() => toggle(c.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="accent-accent"
-                          />
-                        </td>
-                        <td className="px-3 py-2.5 font-mono text-[12px] text-ink-2">{c.id}</td>
-                        <td className="px-3 py-2.5 text-ink">{c.name}</td>
-                        <td className="px-3 py-2.5 font-mono text-[12px] text-ink-2">{c.countryCode}</td>
-                        <td className="px-3 py-2.5 text-ink-2">{c.role}</td>
-                        <td className="px-5 py-2.5 text-right num text-ink">
-                          ${c.monthlyUsd.toLocaleString()}
-                          {dry && (
-                            <span className="ml-2">
-                              {passes ? <Pill tone="positive">✓ pass</Pill> : <Pill tone="negative">reject</Pill>}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {contractors.map((c) => (
+                    <tr key={c.id} onClick={() => toggle(c.id)} className={`cursor-pointer border-b border-rule/60 hover:bg-paper-3 ${selected.has(c.id) ? "bg-paper-3/60" : ""}`}>
+                      <td className="px-5 py-3">
+                        <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} className="accent-accent" />
+                      </td>
+                      <td className="px-3 py-3 text-ink">{c.name}</td>
+                      <td className="px-3 py-3 font-mono text-[12px] text-ink-2">{c.countryCode}</td>
+                      <td className="px-3 py-3 text-ink-2">{c.role}</td>
+                      <td className="px-3 py-3">
+                        {c.encryptCiphertextId ? (
+                          <span className="font-mono text-[11px] text-ink-2" title={c.encryptCiphertextId}>
+                            {c.encryptCiphertextId.slice(0, 4)}…{c.encryptCiphertextId.slice(-4)}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-ink-3">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right num text-ink">${c.monthlyUsd.toLocaleString()}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </Card>
 
-          {/* Side panel */}
           <div className="lg:col-span-4 space-y-3">
-            {dryRun && !result && (
+            {dry && !result && (
               <Card className="p-5">
                 <Label>Dry run</Label>
                 <div className="mt-3 font-display text-[28px] leading-none num">
-                  ${dryRun.totalUsd.toLocaleString()}
+                  ${dry.totalUsd.toLocaleString()}
                 </div>
                 <div className="mt-1 text-[12px] text-ink-2 font-mono num">
-                  ≈ {(Number(dryRun.totalLamports) / 1e9).toFixed(4)} SOL
+                  {(Number(dry.totalLamports) / 1e9).toFixed(4)} SOL · {dry.chunks} {dry.chunks === 1 ? "tx" : "txs"}
                 </div>
-                <ul className="mt-5 space-y-2 text-[13px]">
-                  <li className="flex items-center justify-between">
-                    <span className="text-ink-2">Encrypt threshold</span>
-                    <Pill tone={dryRun.rows.every((r) => r.encryptThresholdPasses) ? "positive" : "negative"}>
-                      {dryRun.rows.filter((r) => r.encryptThresholdPasses).length}/{dryRun.rows.length} pass
-                    </Pill>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-ink-2">Ika co-sign</span>
-                    <Pill tone="warning">stub · 1 sig</Pill>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-ink-2">Cloak batch size</span>
-                    <Pill tone="neutral">{dryRun.rows.length} outputs</Pill>
-                  </li>
-                </ul>
               </Card>
             )}
 
@@ -257,72 +196,37 @@ export default function PayrollPage() {
               <Card className="p-5 shadow-card">
                 <Label>Settled</Label>
                 <div className="mt-3 font-display text-[28px] leading-none num">
-                  {result.recipients.length} paid
+                  {result.recipients.length}
                 </div>
-                <div className="mt-1 text-[12px] text-ink-2 font-mono">
-                  run · {result.runId} · {result.totalChunks} shielded {result.totalChunks === 1 ? "tx" : "txs"}
+                <div className="mt-1 text-[12px] text-ink-3 font-mono">
+                  {result.totalChunks} shielded {result.totalChunks === 1 ? "tx" : "txs"}
                 </div>
-                <div className="mt-5 text-[12px] text-ink-2">
-                  <div className="flex items-center justify-between py-1">
-                    <span>Cloak</span>
-                    <Pill tone={result.cloakLive ? "positive" : "warning"}>
-                      {result.cloakLive ? "live · mainnet" : "simulated · devnet"}
-                    </Pill>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span>Encrypt</span><Pill tone="warning">stub</Pill>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span>Ika</span><Pill tone="warning">stub</Pill>
-                  </div>
-                </div>
-                {!result.cloakLive && (
-                  <p className="mt-4 text-[11px] text-ink-3 leading-relaxed">
-                    Cloak&apos;s shielded pool is mainnet-only. Set{" "}
-                    <code className="font-mono">NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta</code>{" "}
-                    + a funded mainnet keypair to fire real shielded txs.
-                  </p>
-                )}
               </Card>
             )}
-
-            <Card className="p-5">
-              <Label>How a batch fires</Label>
-              <ol className="mt-3 space-y-2 text-[13px] text-ink-2 list-decimal pl-4">
-                <li>envelope-policy runs encrypted threshold check per row.</li>
-                <li>Ika dWallet co-signs the disbursement tx.</li>
-                <li>Cloak generates N stealth keypairs + UTXOs.</li>
-                <li>One <code className="font-mono text-[12px] text-ink">transact()</code> call shields and fans out.</li>
-                <li>Each recipient gets a one-time claim URL by email.</li>
-              </ol>
-            </Card>
           </div>
         </div>
 
-        {/* Recipients with claim links */}
         {result && (
           <>
             <HRule className="my-12" />
             <section>
-              <Eyebrow>Claim links — share via email / DM</Eyebrow>
-              <h2 className="mt-4 font-display text-[28px] tracking-tight">
-                {result.recipients.length} recipients
-              </h2>
+              <Label>Claim links</Label>
+              <h2 className="mt-3 font-display text-[28px] tracking-tight">{result.recipients.length} recipients</h2>
+              <p className="mt-2 text-[13px] text-ink-2">
+                Share these one-time links with each recipient. They expire on first use.
+              </p>
               <Card className="mt-6 p-0 overflow-hidden">
                 <ul className="divide-y divide-rule text-[13px]">
                   {result.recipients.map((r) => (
-                    <li key={r.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-3">
-                      <span className="font-mono text-[12px] text-ink-3">{r.id}</span>
+                    <li key={r.contractorId} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3">
                       <span className="text-ink">{r.name}</span>
                       <span className="text-right num text-ink">${r.monthlyUsd.toLocaleString()}</span>
-                      <a
-                        href={r.claimUrl}
+                      <button
+                        onClick={() => navigator.clipboard.writeText(r.claimUrl)}
                         className="text-[12px] text-accent-ink hover:underline font-mono"
-                        target="_blank"
-                        rel="noreferrer"
                       >
-                        claim ↗
-                      </a>
+                        copy link
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -331,6 +235,15 @@ export default function PayrollPage() {
           </>
         )}
       </main>
+    </>
+  );
+}
+
+function Wrap({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <SiteHeader />
+      <main className="mx-auto max-w-3xl px-6 py-32">{children}</main>
     </>
   );
 }

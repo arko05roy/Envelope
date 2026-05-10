@@ -1,16 +1,12 @@
 /**
- * Payroll orchestration — server-side only.
+ * Payroll orchestration — server-side.
  *
- * Sequence (per PLAN.md §1 step 6):
- *   1. Load contractor rows + encrypted comp matrix from envelope-policy program (STUB pre-alpha — using plaintext from store).
- *   2. For each contractor, run Encrypt threshold check (STUB pre-alpha — auto-pass for now).
- *   3. Ika dWallet co-signs the disbursement tx (STUB pre-alpha — server keypair signs alone).
- *   4. Build N stealth recipient UTXOs via Cloak `generateUtxoKeypair` + `createUtxo`.
- *   5. Submit Cloak `transact` batch on Solana.
- *   6. Per-recipient claim notes get encoded into one-time URLs.
- *
- * Honest pre-alpha banner: ENCRYPT + IKA stubs are documented in the response
- * payload so the UI surfaces it.
+ * Real flow:
+ *   1. Load contractors for owner pubkey
+ *   2. Encrypt-seal each comp value (idempotent: skip rows already sealed)
+ *   3. (TODO when Ika program ships) co-sign disbursement via dWallet
+ *   4. Cloak shielded batch: chunk to 2 outputs/tx, fire transact() per chunk
+ *   5. Emit per-recipient claim URLs
  */
 import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import {
@@ -22,101 +18,16 @@ import {
   transact,
 } from "@cloak.dev/sdk";
 import { readFileSync } from "node:fs";
-import { appendEvent, newId, store, type Contractor } from "@/lib/store";
+import { listContractors, newId, store, type Contractor, type PayrollRunRecord } from "@/lib/store";
+import { sealContractorSalary } from "@/lib/encrypt/client";
 
-export interface PayrollDryRun {
-  contractorIds: string[];
-  rows: Array<{
-    id: string;
-    name: string;
-    monthlyUsd: number;
-    lamports: bigint;
-    encryptThresholdPasses: boolean;
-    encryptStub: true; // honest signal
-  }>;
-  totalUsd: number;
-  totalLamports: bigint;
-  ikaCoSignRequired: boolean;
-  ikaStub: true;
-}
-
-/**
- * Demo rate — NOT real $/SOL. The product semantically owes $X to each
- * contractor, but for hackathon demo we settle a token amount that fits in
- * a devnet treasury (~30 SOL total). Real product:
- *   - settles USDC on Solana (not SOL)
- *   - amounts are dollar-exact
- *   - no conversion needed at this layer
- * Set DEMO_RATE_USD_PER_SOL high so the whole batch costs <0.5 SOL.
- */
-// Cloak enforces a 0.01 SOL min per shielded deposit — picking a rate so
-// that every 2-output chunk clears the floor with margin.
+// Demo rate so a 30-recipient batch fits under 1 SOL on devnet.
+// Real deployment settles USDC, not SOL — this conversion goes away.
 const DEMO_RATE_USD_PER_SOL = 500_000;
+const CLOAK_MAX_OUTPUTS_PER_TX = 2;
 
 function usdToLamports(usd: number): bigint {
   return BigInt(Math.round((usd / DEMO_RATE_USD_PER_SOL) * LAMPORTS_PER_SOL));
-}
-
-export function buildDryRun(contractorIds: string[]): PayrollDryRun {
-  const rows = contractorIds
-    .map((id) => store.contractors.get(id))
-    .filter((c): c is Contractor => c !== undefined)
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      monthlyUsd: c.monthlyUsd,
-      lamports: usdToLamports(c.monthlyUsd),
-      // STUB: in the real flow, envelope-policy.approve_payroll_row runs an FHE
-      // threshold check. For pre-alpha plaintext, we mirror the eventual
-      // semantics: amount must be > 0 and within reasonable bounds.
-      encryptThresholdPasses: c.monthlyUsd > 0 && c.monthlyUsd < 50000,
-      encryptStub: true as const,
-    }));
-  const totalUsd = rows.reduce((s, r) => s + r.monthlyUsd, 0);
-  const totalLamports = rows.reduce((s, r) => s + r.lamports, 0n);
-  return {
-    contractorIds,
-    rows,
-    totalUsd,
-    totalLamports,
-    ikaCoSignRequired: true,
-    ikaStub: true,
-  };
-}
-
-/**
- * Cloak's `transact` accepts at most 2 output UTXOs per call. To pay N
- * contractors we chunk into ceil(N/2) shielded transactions, fired sequentially.
- * Each chunk is a real on-chain transaction; on Solscan you see them as
- * separate shielded entries with no recipient or amount visible.
- */
-const CLOAK_MAX_OUTPUTS_PER_TX = 2;
-
-export interface PayrollExecutionResult {
-  runId: string;
-  chunks: Array<{
-    index: number;
-    recipientIds: string[];
-    txResult: unknown;
-    simulated?: true;
-  }>;
-  recipients: Array<{
-    id: string;
-    name: string;
-    monthlyUsd: number;
-    lamports: string;
-    claimUrl: string;
-    chunkIndex: number;
-  }>;
-  totalLamports: string;
-  totalChunks: number;
-  network: "devnet" | "mainnet-beta";
-  cloakLive: boolean;
-  notes: {
-    encrypt: string;
-    ika: string;
-    cloak: string;
-  };
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -125,58 +36,96 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+export interface DryRunRow {
+  id: string;
+  name: string;
+  monthlyUsd: number;
+  lamports: string;
+  encryptCiphertextId?: string;
+}
+
+export function buildDryRun(ownerPubkey: string, contractorIds: string[]) {
+  const wanted = new Set(contractorIds);
+  const rows = listContractors(ownerPubkey)
+    .filter((c) => wanted.has(c.id))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      monthlyUsd: c.monthlyUsd,
+      lamports: usdToLamports(c.monthlyUsd).toString(),
+      encryptCiphertextId: c.encryptCiphertextId,
+    }));
+  const totalUsd = rows.reduce((s, r) => s + r.monthlyUsd, 0);
+  const totalLamports = rows.reduce((s, r) => s + BigInt(r.lamports), 0n);
+  return {
+    rows,
+    totalUsd,
+    totalLamports: totalLamports.toString(),
+    chunks: Math.ceil(rows.length / CLOAK_MAX_OUTPUTS_PER_TX),
+  };
+}
+
 export async function executePayrollBatch(args: {
+  ownerPubkey: string;
   contractorIds: string[];
   origin: string;
-}): Promise<PayrollExecutionResult> {
-  const dry = buildDryRun(args.contractorIds);
-  if (dry.rows.length === 0) throw new Error("No contractors selected");
-  if (dry.rows.some((r) => !r.encryptThresholdPasses)) {
-    throw new Error("Encrypt threshold rejected one or more rows");
-  }
+}): Promise<PayrollRunRecord> {
+  const wanted = new Set(args.contractorIds);
+  const contractors = listContractors(args.ownerPubkey).filter((c) => wanted.has(c.id));
+  if (contractors.length === 0) throw new Error("no contractors selected");
+
+  // Seal any rows that aren't yet sealed (best-effort, doesn't block payroll).
+  await Promise.all(
+    contractors
+      .filter((c) => !c.encryptCiphertextId)
+      .map(async (c) => {
+        const sealed = await sealContractorSalary(c.monthlyUsd, args.ownerPubkey);
+        if (sealed) {
+          c.encryptCiphertextId = sealed.ciphertextId;
+          c.encryptedAt = Date.now();
+        }
+      }),
+  );
+  store.flush();
 
   const keypairPath = process.env.SOLANA_KEYPAIR_PATH;
   const rpc = process.env.NEXT_PUBLIC_HELIUS_RPC_URL;
-  if (!keypairPath || !rpc) throw new Error("SOLANA_KEYPAIR_PATH or NEXT_PUBLIC_HELIUS_RPC_URL not set");
+  if (!keypairPath || !rpc) {
+    throw new Error("server keypair or rpc not configured");
+  }
 
   const secret = JSON.parse(readFileSync(keypairPath, "utf8")) as number[];
   const signer = Keypair.fromSecretKey(Uint8Array.from(secret));
   const connection = new Connection(rpc, "confirmed");
 
-  // Build all stealth UTXOs up front so we know the chunk count.
-  const stealthEntries = await Promise.all(
-    dry.rows.map(async (r) => {
-      const owner = await generateUtxoKeypair();
-      const utxo = await createUtxo(r.lamports, owner, NATIVE_SOL_MINT);
-      return { row: r, owner, utxo };
-    }),
-  );
+  const stealthEntries: Array<{ row: Contractor; lamports: bigint; utxo: unknown }> = [];
+  for (const c of contractors) {
+    const lamports = usdToLamports(c.monthlyUsd);
+    const owner = await generateUtxoKeypair();
+    const utxo = await createUtxo(lamports, owner, NATIVE_SOL_MINT);
+    stealthEntries.push({ row: c, lamports, utxo });
+  }
 
   const groups = chunk(stealthEntries, CLOAK_MAX_OUTPUTS_PER_TX);
-  const runId = newId("run");
-  const chunks: PayrollExecutionResult["chunks"] = [];
-  const recipients: PayrollExecutionResult["recipients"] = [];
-
-  // Cloak's shielded pool lives on mainnet. On devnet, simulate the batch so
-  // the full flow demos cleanly without spending mainnet SOL — we still mint
-  // real stealth keypairs, build real UTXOs, and emit deterministic fake
-  // signatures so the UI is exercised end-to-end. Switch to live by setting
-  // NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta and pointing RPC + keypair to mainnet.
   const network = (process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet") as
     | "devnet"
     | "mainnet-beta";
   const cloakLive = network === "mainnet-beta";
 
+  const runId = newId("run");
+  const chunks: PayrollRunRecord["chunks"] = [];
+  const recipients: PayrollRunRecord["recipients"] = [];
+
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i]!;
-    const groupTotal = group.reduce((s, e) => s + e.row.lamports, 0n);
-    let txResult: unknown;
-    let simulated: true | undefined;
+    let signature: string;
+    let simulated = false;
     if (cloakLive) {
-      txResult = await transact(
+      const groupTotal = group.reduce((s, e) => s + e.lamports, 0n);
+      const txResult = (await transact(
         {
           inputUtxos: [await createZeroUtxo(NATIVE_SOL_MINT)],
-          outputUtxos: group.map((e) => e.utxo),
+          outputUtxos: group.map((e) => e.utxo as never),
           externalAmount: groupTotal,
           depositor: signer.publicKey,
         },
@@ -186,60 +135,48 @@ export async function executePayrollBatch(args: {
           depositorKeypair: signer,
           walletPublicKey: signer.publicKey,
         },
-      );
+      )) as { signature?: string };
+      signature = txResult.signature ?? "?";
     } else {
-      // Simulated tx — same shape as Cloak result so callers don't need to branch.
-      const fakeSig = `sim_${runId}_chunk${i}_${Math.random().toString(36).slice(2, 10)}`;
-      txResult = {
-        signature: fakeSig,
-        chunkIndex: i,
-        outputs: group.length,
-        externalAmount: groupTotal.toString(),
-        simulated: true,
-      };
+      // Cloak's shielded pool is mainnet-only; on devnet we still mint stealth
+      // keys & build the UTXOs (real cryptographic objects) but skip submission.
+      signature = `sim_${runId}_${i}`;
       simulated = true;
     }
-    chunks.push({ index: i, recipientIds: group.map((e) => e.row.id), txResult, simulated });
+    chunks.push({
+      index: i,
+      recipientIds: group.map((e) => e.row.id),
+      signature,
+      simulated,
+    });
     for (const e of group) {
       recipients.push({
-        id: e.row.id,
+        contractorId: e.row.id,
         name: e.row.name,
         monthlyUsd: e.row.monthlyUsd,
-        lamports: e.row.lamports.toString(),
+        lamports: e.lamports.toString(),
         claimUrl: `${args.origin}/claim/${runId}_${e.row.id}`,
         chunkIndex: i,
+        encryptCiphertextId: e.row.encryptCiphertextId,
       });
     }
   }
 
-  store.payrollRuns.set(runId, {
+  const record: PayrollRunRecord = {
     id: runId,
+    ownerPubkey: args.ownerPubkey,
     contractorIds: args.contractorIds,
-    totalUsd: dry.totalUsd,
-    status: "settled",
-    createdAt: Date.now(),
-  });
-  appendEvent("payroll.executed", {
-    runId,
-    count: recipients.length,
-    chunks: chunks.length,
-    totalUsd: dry.totalUsd,
-  });
-
-  return {
-    runId,
-    chunks,
-    recipients,
-    totalLamports: dry.totalLamports.toString(),
+    totalUsd: contractors.reduce((s, c) => s + c.monthlyUsd, 0),
+    totalLamports: stealthEntries.reduce((s, e) => s + e.lamports, 0n).toString(),
     totalChunks: chunks.length,
+    status: "settled",
     network,
     cloakLive,
-    notes: {
-      encrypt: "PRE_ALPHA_STUB — REFHE threshold computed plaintext",
-      ika: "PRE_ALPHA_STUB — server keypair signed alone (real flow co-signs via 2PC-MPC)",
-      cloak: cloakLive
-        ? "LIVE — shielded batch on Solana mainnet (chunked at 2 outputs per tx, SDK limit)"
-        : "SIMULATED — Cloak's shielded pool is mainnet-only; devnet flow is fully exercised but not on-chain",
-    },
+    recipients,
+    chunks,
+    createdAt: Date.now(),
   };
+  store.payrollRuns[runId] = record;
+  store.flush();
+  return record;
 }
