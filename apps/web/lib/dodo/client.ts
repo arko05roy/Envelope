@@ -45,9 +45,54 @@ export async function createInvoicePayment(input: CreateInvoicePaymentInput) {
   } as never);
 }
 
-/** Verify webhook signature against DODO_WEBHOOK_SIGNING_KEY (HMAC-SHA256). */
-export function verifyDodoWebhook(rawBody: string, signature: string): boolean {
-  // TODO(D4): use the documented Dodo signature scheme; see /api-reference/webhooks.
-  void rawBody; void signature;
-  return false;
+/**
+ * Verify a Dodo webhook (Svix scheme).
+ *
+ * Dodo's dashboard runs on Svix. Signing is:
+ *   signed_payload = `${svix_id}.${svix_timestamp}.${rawBody}`
+ *   signature      = base64( HMAC-SHA256(secret_bytes, signed_payload) )
+ *   header         = "v1,<sig>"  (multiple comma-space separated values possible
+ *                     when secrets are rotated; any one match passes)
+ *
+ * The signing secret in DODO_WEBHOOK_SIGNING_KEY starts with `whsec_`; the bytes
+ * are base64 of everything after that prefix.
+ *
+ * Reject if the timestamp is older than 5 minutes (replay protection).
+ */
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+export function verifyDodoWebhook(rawBody: string, headers: Headers): boolean {
+  const secret = process.env.DODO_WEBHOOK_SIGNING_KEY;
+  const id = headers.get("svix-id");
+  const timestamp = headers.get("svix-timestamp");
+  const sigHeader = headers.get("svix-signature");
+  if (!secret || !id || !timestamp || !sigHeader) return false;
+
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  const ageSec = Math.abs(Date.now() / 1000 - ts);
+  if (ageSec > 300) return false;
+
+  const stripped = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+  let secretBytes: Buffer;
+  try {
+    secretBytes = Buffer.from(stripped, "base64");
+  } catch {
+    return false;
+  }
+
+  const signedPayload = `${id}.${timestamp}.${rawBody}`;
+  const expected = createHmac("sha256", secretBytes).update(signedPayload).digest("base64");
+
+  // Header may contain multiple "v1,sig" entries separated by spaces.
+  return sigHeader.split(" ").some((entry) => {
+    const [version, sig] = entry.split(",");
+    if (version !== "v1" || !sig) return false;
+    if (sig.length !== expected.length) return false;
+    try {
+      return timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+    } catch {
+      return false;
+    }
+  });
 }

@@ -5,10 +5,11 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const raw = await req.text();
-  const sig = req.headers.get("dodo-signature") ?? "";
-  if (!verifyDodoWebhook(raw, sig)) {
+  if (!verifyDodoWebhook(raw, req.headers)) {
     return NextResponse.json({ error: "bad signature" }, { status: 401 });
   }
-  // TODO(D4): handle payment.succeeded, subscription.activated, etc.
+  const evt = JSON.parse(raw) as { type: string; data: unknown };
+  // TODO: switch on evt.type — payment.succeeded, subscription.active, etc.
+  void evt;
   return NextResponse.json({ received: true });
 }
