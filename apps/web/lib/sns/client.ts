@@ -19,6 +19,7 @@ import {
   getAllDomains as getAllDomainsMainnet,
   getPrimaryDomain as getPrimaryDomainMainnet,
 } from "@bonfida/spl-name-service";
+import { snsConfig, parentSuffix } from "./config";
 
 // Devnet has its own ROOT_DOMAIN_ACCOUNT, so domain key derivation differs
 // between clusters even though the program ID is identical. Pick the right
@@ -30,23 +31,16 @@ const reverseLookupFor = (cluster: SnsCluster) =>
 const getPrimaryDomainFor = (cluster: SnsCluster) =>
   cluster === "devnet" ? snsDevnet.utils.getPrimaryDomain : getPrimaryDomainMainnet;
 
-// NEXT_PUBLIC_HELIUS_RPC_URL is the app's primary cluster (devnet in this
-// project), so don't reuse it as the mainnet fallback — it would silently
-// route mainnet `.sol` resolution to a devnet RPC and return null.
-const MAINNET_RPC =
-  process.env.HELIUS_MAINNET_RPC_URL ?? "https://api.mainnet-beta.solana.com";
-const DEVNET_RPC =
-  process.env.HELIUS_DEVNET_RPC_URL ??
-  process.env.NEXT_PUBLIC_HELIUS_RPC_URL ??
-  "https://api.devnet.solana.com";
-
 export type SnsCluster = "mainnet" | "devnet";
 
 const connCache = new Map<SnsCluster, Connection>();
 function conn(cluster: SnsCluster): Connection {
   let c = connCache.get(cluster);
   if (!c) {
-    c = new Connection(cluster === "devnet" ? DEVNET_RPC : MAINNET_RPC, "confirmed");
+    c = new Connection(
+      cluster === "devnet" ? snsConfig.devnetRpc : snsConfig.mainnetRpc,
+      "confirmed",
+    );
     connCache.set(cluster, c);
   }
   return c;
@@ -60,10 +54,14 @@ export function isValidSnsHandle(s: string): boolean {
   return HANDLE_RE.test(s);
 }
 
-// Handles ending in `.envelope.sol` are bootstrapped on devnet for the demo;
-// everything else lives on mainnet.
+// Handles under the configured parent domain resolve on the parent's cluster
+// (typically devnet for demos). Everything else resolves on mainnet.
 export function clusterFor(handle: string): SnsCluster {
-  return handle.toLowerCase().endsWith(".envelope.sol") ? "devnet" : "mainnet";
+  const suffix = parentSuffix();
+  if (suffix && handle.toLowerCase().endsWith(suffix)) {
+    return snsConfig.parentCluster;
+  }
+  return "mainnet";
 }
 
 export interface ResolvedSns {

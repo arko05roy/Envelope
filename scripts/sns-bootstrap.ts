@@ -39,11 +39,14 @@ import { devnet } from "@bonfida/spl-name-service";
 import { readFileSync } from "node:fs";
 
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
-const PARENT = "envelope";
-const SUBS = ["alice", "bob", "carol", "dev", "payroll-agent"];
-const PARENT_SPACE = 1_000;
-const SUB_SPACE = 1_000;
-const WRAP_LAMPORTS = 10_000_000; // 0.01 SOL into WSOL
+const PARENT = process.env.SNS_PARENT_DOMAIN;
+const SUBS = (process.env.SNS_SUBDOMAINS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const PARENT_SPACE = Number(process.env.SNS_PARENT_SPACE ?? 1_000);
+const SUB_SPACE = Number(process.env.SNS_SUB_SPACE ?? 1_000);
+const WRAP_LAMPORTS = Number(process.env.SNS_WRAP_LAMPORTS ?? 10_000_000);
 
 async function exists(conn: Connection, pubkey: PublicKey): Promise<boolean> {
   const info = await conn.getAccountInfo(pubkey);
@@ -53,6 +56,10 @@ async function exists(conn: Connection, pubkey: PublicKey): Promise<boolean> {
 async function main() {
   const keypairPath = process.env.SOLANA_KEYPAIR_PATH;
   if (!keypairPath) throw new Error("SOLANA_KEYPAIR_PATH not set");
+  if (!PARENT) throw new Error("SNS_PARENT_DOMAIN not set (e.g. SNS_PARENT_DOMAIN=envelope)");
+  if (SUBS.length === 0) {
+    console.warn("SNS_SUBDOMAINS empty — only registering parent");
+  }
   const secret = JSON.parse(readFileSync(keypairPath, "utf8")) as number[];
   const signer = Keypair.fromSecretKey(Uint8Array.from(secret));
   const conn = new Connection(RPC, "confirmed");

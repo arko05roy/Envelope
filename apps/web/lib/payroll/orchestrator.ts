@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { listContractors, newId, store, type Contractor, type PayrollRunRecord } from "@/lib/store";
 import { sealContractorSalary } from "@/lib/encrypt/client";
 import { approvePayrollBatch, fetchPolicy, hashBatch } from "@/lib/policy/client";
+import { agentHandle } from "@/lib/sns/config";
 
 // Demo rate so a 30-recipient batch fits under 1 SOL on devnet.
 // Real deployment settles USDC, not SOL — this conversion goes away.
@@ -200,7 +201,7 @@ export async function executePayrollBatch(args: {
     policyApproval,
     recipients,
     chunks,
-    paidByAgent: "payroll-agent.envelope.sol",
+    paidByAgent: agentHandle() ?? undefined,
     createdAt: Date.now(),
   };
   store.payrollRuns[runId] = record;
