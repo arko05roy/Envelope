@@ -130,8 +130,20 @@ export default function ContractorsPage() {
                     {contractors.map((c) => (
                       <tr key={c.id} className="border-b border-rule/60">
                         <td className="px-5 py-3">
-                          <div className="text-ink">{c.name}</div>
-                          <div className="text-[11px] text-ink-3 font-mono">{c.email}</div>
+                          <div className="text-ink flex items-center gap-2">
+                            {c.name}
+                            {c.snsHandle && (
+                              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-rule text-ink-2">
+                                {c.snsHandle}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-ink-3 font-mono flex items-center gap-2">
+                            <span>{c.email}</span>
+                            {c.snsRecords?.github && <span title="SNS Github record">· gh ✓</span>}
+                            {c.snsRecords?.twitter && <span title="SNS Twitter record">· tw ✓</span>}
+                            {c.snsRecords?.discord && <span title="SNS Discord record">· dc ✓</span>}
+                          </div>
                         </td>
                         <td className="px-3 py-3 font-mono text-[12px] text-ink-2">{c.countryCode}</td>
                         <td className="px-3 py-3 text-ink-2">{c.role}</td>
@@ -177,14 +189,50 @@ function ContractorForm({ onCreated }: { onCreated: () => void }) {
   const [countryCode, setCountryCode] = useState("");
   const [role, setRole] = useState("");
   const [monthlyUsd, setMonthlyUsd] = useState("");
+  const [snsHandle, setSnsHandle] = useState("");
+  const [snsState, setSnsState] = useState<
+    | { status: "idle" }
+    | { status: "checking" }
+    | { status: "ok"; pubkey: string; cluster: "mainnet" | "devnet" }
+    | { status: "missing" }
+    | { status: "invalid" }
+  >({ status: "idle" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Debounced live SNS resolution preview.
+  useEffect(() => {
+    const h = snsHandle.trim().toLowerCase();
+    if (!h) return setSnsState({ status: "idle" });
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)*\.sol$/.test(h)) {
+      return setSnsState({ status: "invalid" });
+    }
+    setSnsState({ status: "checking" });
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/sns/resolve?handle=${encodeURIComponent(h)}`, {
+          signal: ctrl.signal,
+        });
+        const j = (await r.json()) as { resolved: { pubkey: string; cluster: "mainnet" | "devnet" } | null };
+        if (j.resolved) setSnsState({ status: "ok", ...j.resolved });
+        else setSnsState({ status: "missing" });
+      } catch {
+        // aborted
+      }
+    }, 350);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [snsHandle]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setErr(null);
     try {
+      const trimmed = snsHandle.trim().toLowerCase();
       await api(pubkey, "/api/contractors", {
         method: "POST",
         body: JSON.stringify({
@@ -193,6 +241,7 @@ function ContractorForm({ onCreated }: { onCreated: () => void }) {
           countryCode: countryCode.toUpperCase(),
           role,
           monthlyUsd: Number(monthlyUsd),
+          ...(trimmed ? { snsHandle: trimmed } : {}),
         }),
       });
       onCreated();
@@ -212,6 +261,29 @@ function ContractorForm({ onCreated }: { onCreated: () => void }) {
         <Field label="Country code" value={countryCode} onChange={setCountryCode} placeholder="IN" maxLength={3} />
         <Field label="Role" value={role} onChange={setRole} placeholder="Engineer" />
         <Field label="Monthly USD" value={monthlyUsd} onChange={setMonthlyUsd} type="number" placeholder="6000" />
+        <label className="block">
+          <Label>.sol handle (optional)</Label>
+          <input
+            type="text"
+            value={snsHandle}
+            onChange={(e) => setSnsHandle(e.target.value)}
+            placeholder="asha.sol"
+            className="mt-2 w-full h-10 px-3 text-[14px] bg-paper border border-rule rounded focus:border-rule-strong focus:outline-none focus:ring-2 focus:ring-accent/20"
+          />
+          <div className="mt-1 text-[11px] font-mono">
+            {snsState.status === "idle" && (
+              <span className="text-ink-3">Identity via Solana Name Service. Records V2 (email/twitter/github) auto-imported.</span>
+            )}
+            {snsState.status === "checking" && <span className="text-ink-3">resolving…</span>}
+            {snsState.status === "invalid" && <span className="text-negative">invalid handle</span>}
+            {snsState.status === "missing" && <span className="text-ink-3">not registered</span>}
+            {snsState.status === "ok" && (
+              <span className="text-positive">
+                ✓ {snsState.pubkey.slice(0, 4)}…{snsState.pubkey.slice(-4)} ({snsState.cluster})
+              </span>
+            )}
+          </div>
+        </label>
         {err && <div className="sm:col-span-2 text-[13px] text-negative">{err}</div>}
         <div className="sm:col-span-2 flex gap-2">
           <Button type="submit" variant="primary" disabled={busy}>

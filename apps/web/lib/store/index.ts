@@ -31,6 +31,15 @@ export interface Contractor {
   /** Encrypt ciphertext id of monthly_usd, base58 of the on-chain account pubkey. */
   encryptCiphertextId?: string;
   encryptedAt?: number;
+  snsHandle?: string;
+  snsResolvedPubkey?: string;
+  snsCluster?: "mainnet" | "devnet";
+  snsRecords?: {
+    email?: { value: string; staleness: boolean; roa: boolean };
+    twitter?: { value: string; staleness: boolean; roa: boolean };
+    github?: { value: string; staleness: boolean; roa: boolean };
+    discord?: { value: string; staleness: boolean; roa: boolean };
+  };
   createdAt: number;
 }
 
@@ -73,8 +82,11 @@ export interface PayrollRunRecord {
     claimUrl: string;
     chunkIndex: number;
     encryptCiphertextId?: string;
+    snsHandle?: string;
   }>;
   chunks: Array<{ index: number; recipientIds: string[]; signature: string | null }>;
+  /** SNS subdomain identifying the orchestrator agent that signed this run. */
+  paidByAgent?: string;
   createdAt: number;
 }
 

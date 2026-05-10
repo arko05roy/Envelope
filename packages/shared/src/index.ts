@@ -9,6 +9,8 @@ export interface Contractor {
   countryCode: string;
   role: Role;
   salaryLamports: bigint;
+  snsHandle?: string;
+  snsResolvedPubkey?: string;
 }
 
 export interface Org {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authResponse, requireWalletPubkey } from "@/lib/auth";
 import { listContractors, newId, store, type Contractor } from "@/lib/store";
 import { sealContractorSalary } from "@/lib/encrypt/client";
+import { resolveSnsHandle, getRecordsBundle } from "@/lib/sns/client";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,10 @@ const Body = z.object({
   countryCode: z.string().min(2).max(3),
   role: z.string().min(1).max(40),
   monthlyUsd: z.number().int().positive().max(1_000_000),
+  snsHandle: z
+    .string()
+    .regex(/^[a-z0-9-]+(\.[a-z0-9-]+)*\.sol$/i)
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -36,8 +41,24 @@ export async function POST(req: Request) {
       ownerPubkey: pubkey,
       ...parsed.data,
       countryCode: parsed.data.countryCode.toUpperCase(),
+      snsHandle: parsed.data.snsHandle?.toLowerCase(),
       createdAt: Date.now(),
     };
+
+    // Best-effort SNS resolution + Records V2 bundle. Same pattern as the
+    // Encrypt seal below: failure does not block contractor creation.
+    if (c.snsHandle) {
+      try {
+        const r = await resolveSnsHandle(c.snsHandle);
+        if (r) {
+          c.snsResolvedPubkey = r.pubkey;
+          c.snsCluster = r.cluster;
+        }
+        c.snsRecords = await getRecordsBundle(c.snsHandle);
+      } catch {
+        // surfaced on next refresh; contractor is still saved
+      }
+    }
 
     // Seal salary as an Encrypt ciphertext on Solana devnet — best-effort.
     // If Encrypt's gRPC is unreachable, the contractor is still saved; the

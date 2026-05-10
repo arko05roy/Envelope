@@ -32,6 +32,23 @@ For each track, a one-sentence necessity statement + the file/line reference + t
 - **Demo:** 30-person payroll fires as one shielded batch; auditor opens a scoped viewing key dashboard.
 - **Submission:** working demo / live URL, public GitHub, README (problem, target user, Cloak SDK usage, setup, program IDs), ≤5 min video, arena.colosseum.org submission.
 
+## SNS Identity Track (Frontier x Network School — $3.6k winners + $1.4k runner-ups)
+
+- **Necessity:** *Identity is the missing primitive for trust in payroll — `.sol` makes contractor onboarding portable and the orchestrator agent verifiable.*
+- **Code:**
+  - `apps/web/lib/sns/client.ts` — sponsor wrapper (resolve, reverse lookup, Records V2 with staleness/RoA flags)
+  - `apps/web/app/api/sns/resolve/route.ts`, `apps/web/app/api/sns/records/route.ts` — server-side resolver + records bundle
+  - `apps/web/app/api/contractors/route.ts` — best-effort SNS resolution + records import on contractor create
+  - `apps/web/app/dashboard/contractors/page.tsx` — `.sol` handle input with live debounced resolution; verified-record badges in the list
+  - `apps/web/lib/payroll/orchestrator.ts` — every run is signed by `payroll-agent.envelope.sol` (Agent Identity)
+  - `apps/web/app/claim/[id]/page.tsx` — `.sol` greeting + agent footer
+  - `scripts/sns-bootstrap.ts` — one-shot devnet registration of `envelope.sol` + 5 demo subdomains
+- **Capabilities used:** `resolve` (SNS-IP-5), `getDomainKeySync`, `reverseLookup`, `getPrimaryDomain`, `getAllDomains`, `getRecordV2` with staleness/RoA verification, `createSubdomain`, `createNameRegistry` on the devnet bindings module.
+- **Theme: Agent Identity** — `payroll-agent.envelope.sol` is the on-chain identity of the orchestrator; subdomains under `envelope.sol` give every contractor a deterministic, parent-revocable identity without writing a custom registry program.
+- **Theme: Social Identity** — onboarding accepts `alice.sol`; SNS Records V2 (email / twitter / github / discord) are pulled with their staleness + RoA flags so judges can see the trust chain rather than us hand-rolling email validation.
+- **Demo:** open `/dashboard/contractors`, type `bonfida.sol` → live mainnet resolution preview; add a contractor via `alice.envelope.sol` (devnet bootstrapped) → run payroll → claim page greets `Hi, alice.envelope.sol` with `paid by payroll-agent.envelope.sol` footer.
+- **Submission:** Colosseum Frontier (Global) + Superteam Earn; public GitHub; README explains identity primitive + run instructions (`pnpm sns:bootstrap`); ≤5 min video.
+
 ---
 
 ## Pre-flight before each track submission

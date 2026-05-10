@@ -58,6 +58,21 @@ cp .env.example .env.local
 pnpm dev
 ```
 
+### Demo: SNS identity tree (devnet)
+
+For the SNS Identity Track demo we register `envelope.sol` and a handful of
+contractor + agent subdomains on Solana devnet. One-shot:
+
+```bash
+solana airdrop 5 -u devnet                           # fund the bootstrap signer
+SOLANA_KEYPAIR_PATH=~/.config/solana/id.json \
+  pnpm sns:bootstrap
+```
+
+After this, `alice.envelope.sol`, `payroll-agent.envelope.sol`, etc. resolve on
+devnet via `/api/sns/resolve?handle=...&cluster=devnet`. Real `.sol` handles
+(e.g. `bonfida.sol`) resolve against mainnet automatically.
+
 ## Sponsor integration
 
 Each sponsor's tech is structurally load-bearing. Pull any out, the product collapses. See [docs/sponsor-integration-checklist.md](./docs/sponsor-integration-checklist.md) for the per-track judging answers.
@@ -69,6 +84,7 @@ Each sponsor's tech is structurally load-bearing. Pull any out, the product coll
 | Ika | `apps/web/lib/ika/`, treasury policy in `apps/web/app/dashboard/treasury/` |
 | Encrypt | `programs/envelope-policy/src/lib.rs`, `apps/web/lib/encrypt/` |
 | Cloak | `apps/web/lib/cloak/`, payroll runner in `apps/web/app/api/payroll/run/` |
+| SNS Identity | `apps/web/lib/sns/`, `apps/web/app/api/sns/`, `scripts/sns-bootstrap.ts` |
 
 ## Status
 

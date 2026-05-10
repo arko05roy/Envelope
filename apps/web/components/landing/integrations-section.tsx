@@ -7,6 +7,7 @@ const integrations = [
   { name: "Ika", category: "MPC dWallet" },
   { name: "Encrypt", category: "FHE policy" },
   { name: "Cloak", category: "Shielded transfers" },
+  { name: "SNS", category: ".sol identity" },
   { name: "Dodo", category: "Fiat on-ramp" },
   { name: "Solana", category: "Settlement layer" },
   { name: "Helius", category: "RPC" },

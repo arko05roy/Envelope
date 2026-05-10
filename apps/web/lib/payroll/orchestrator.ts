@@ -182,6 +182,7 @@ export async function executePayrollBatch(args: {
         claimUrl: `${args.origin}/claim/${runId}_${e.row.id}`,
         chunkIndex: i,
         encryptCiphertextId: e.row.encryptCiphertextId,
+        snsHandle: e.row.snsHandle,
       });
     }
   }
@@ -199,6 +200,7 @@ export async function executePayrollBatch(args: {
     policyApproval,
     recipients,
     chunks,
+    paidByAgent: "payroll-agent.envelope.sol",
     createdAt: Date.now(),
   };
   store.payrollRuns[runId] = record;

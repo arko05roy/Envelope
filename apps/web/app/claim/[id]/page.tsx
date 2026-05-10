@@ -34,7 +34,7 @@ export default function ClaimPage({ params }: Params) {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-24">
       <Card className="w-full max-w-lg p-8 shadow-lift">
-        <Eyebrow>You&apos;ve been paid</Eyebrow>
+        <Eyebrow>{recipient.snsHandle ? `Hi, ${recipient.snsHandle}` : "You've been paid"}</Eyebrow>
         <h1 className="mt-5 font-display text-[40px] leading-none tracking-tighter num">
           ${recipient.monthlyUsd.toLocaleString()}
         </h1>
@@ -67,6 +67,11 @@ export default function ClaimPage({ params }: Params) {
             {run.cloakStatus === "settled" ? "shielded" : "approved"}
           </Pill>
         </div>
+        {run.paidByAgent && (
+          <div className="mt-3 text-[11px] text-ink-3 font-mono">
+            paid by {run.paidByAgent} via Ika dWallet
+          </div>
+        )}
       </Card>
     </main>
   );
