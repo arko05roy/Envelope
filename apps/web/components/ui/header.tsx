@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WalletButton } from "./wallet-button";
 
 export function SiteHeader() {
   return (
@@ -28,12 +29,7 @@ export function SiteHeader() {
             Audit
           </Link>
           <span className="mx-2 h-5 w-px bg-rule" />
-          <Link
-            href="/dashboard"
-            className="px-3 h-9 inline-flex items-center text-[13px] bg-accent text-paper rounded hover:bg-accent-ink transition-colors duration-150"
-          >
-            Open app
-          </Link>
+          <WalletButton />
         </nav>
       </div>
     </header>
@@ -41,7 +37,6 @@ export function SiteHeader() {
 }
 
 function Logo({ className = "" }: { className?: string }) {
-  // Simple envelope mark — flap suggests an opening seal.
   return (
     <svg viewBox="0 0 20 20" className={className} fill="none" stroke="currentColor" strokeWidth="1.4">
       <rect x="1.5" y="4.5" width="17" height="13" rx="1.5" />

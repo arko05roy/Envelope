@@ -12,7 +12,10 @@
   "dependencies": {
     "@cloak.dev/sdk": "latest",
     "@dodopayments/nextjs": "latest",
-    "@privy-io/react-auth": "^2.0.0",
+    "@solana/wallet-adapter-base": "^0.9.27",
+    "@solana/wallet-adapter-react": "^0.15.39",
+    "@solana/wallet-adapter-react-ui": "^0.9.39",
+    "@solana/wallet-adapter-wallets": "^0.19.36",
     "@solana/web3.js": "^1.98.0",
     "dodopayments": "latest",
     "standardwebhooks": "^1.0.0",
