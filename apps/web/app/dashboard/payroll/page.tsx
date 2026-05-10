@@ -194,13 +194,29 @@ export default function PayrollPage() {
 
             {result && (
               <Card className="p-5 shadow-card">
-                <Label>Settled</Label>
+                <Label>{result.cloakStatus === "settled" ? "Settled" : "Approved"}</Label>
                 <div className="mt-3 font-display text-[28px] leading-none num">
                   {result.recipients.length}
                 </div>
                 <div className="mt-1 text-[12px] text-ink-3 font-mono">
-                  {result.totalChunks} shielded {result.totalChunks === 1 ? "tx" : "txs"}
+                  {result.totalChunks} {result.totalChunks === 1 ? "batch" : "batches"} ·{" "}
+                  {result.cloakStatus === "settled"
+                    ? "shielded on Solana"
+                    : "awaiting mainnet"}
                 </div>
+                {result.policyApproval && (
+                  <div className="mt-3 text-[11px] text-ink-3 font-mono break-all">
+                    on-chain approval ·{" "}
+                    <a
+                      href={`https://solscan.io/tx/${result.policyApproval.signature}?cluster=devnet`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent-ink hover:underline"
+                    >
+                      {result.policyApproval.signature.slice(0, 12)}…
+                    </a>
+                  </div>
+                )}
               </Card>
             )}
           </div>

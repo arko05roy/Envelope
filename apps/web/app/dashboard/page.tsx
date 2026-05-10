@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/ui/header";
 import { Button, Card, HRule, Label, Pill, Stat } from "@/components/ui/primitives";
 import { ConnectWalletState, EmptyState } from "@/components/ui/empty-state";
 import { OnboardingDialog } from "@/components/flows/onboarding";
+import { NewInvoiceDialog } from "@/components/flows/new-invoice";
 import { useOrg } from "@/lib/hooks/useOrg";
 import { api } from "@/lib/api/fetcher";
 import type { Invoice, PayrollRunRecord } from "@/lib/store";
@@ -175,35 +176,34 @@ export default function DashboardPage() {
               />
             ) : (
               <ul className="divide-y divide-rule">
-                {invoices.map((inv) => (
-                  <li key={inv.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3.5">
-                    <div>
-                      <div className="text-[14px] text-ink">{inv.id}</div>
-                      <div className="mt-0.5 text-[12px] text-ink-3 font-mono">
-                        {inv.rail.toUpperCase()}
-                        {inv.kiraLinkUrl && (
-                          <>
-                            {" · "}
-                            <a
-                              href={inv.kiraLinkUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="hover:text-ink"
-                            >
-                              checkout ↗
-                            </a>
-                          </>
-                        )}
+                {invoices.map((inv) => {
+                  const url = inv.kiraLinkUrl ?? inv.dodoCheckoutUrl;
+                  const railLabel = inv.rail === "kirapay" ? "Crypto" : "Card / fiat";
+                  return (
+                    <li key={inv.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3.5">
+                      <div>
+                        <div className="text-[14px] text-ink">{inv.id}</div>
+                        <div className="mt-0.5 text-[12px] text-ink-3">
+                          {railLabel}
+                          {url && (
+                            <>
+                              {" · "}
+                              <a href={url} target="_blank" rel="noreferrer" className="hover:text-ink">
+                                checkout ↗
+                              </a>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <Pill tone={inv.status === "settled" ? "positive" : "neutral"}>
-                      {inv.status}
-                    </Pill>
-                    <div className="text-right text-[14px] num text-ink">
-                      ${inv.amountUsd.toFixed(2)}
-                    </div>
-                  </li>
-                ))}
+                      <Pill tone={inv.status === "settled" ? "positive" : "neutral"}>
+                        {inv.status}
+                      </Pill>
+                      <div className="text-right text-[14px] num text-ink">
+                        ${inv.amountUsd.toFixed(2)}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Card>
@@ -222,11 +222,11 @@ export default function DashboardPage() {
                       <div>
                         <div className="text-ink num">${r.totalUsd.toLocaleString()}</div>
                         <div className="text-[11px] text-ink-3 font-mono">
-                          {r.recipients.length} recipients · {r.totalChunks} txs
+                          {r.recipients.length} recipients · {r.totalChunks} {r.totalChunks === 1 ? "batch" : "batches"}
                         </div>
                       </div>
-                      <Pill tone={r.cloakLive ? "positive" : "neutral"}>
-                        {r.cloakLive ? "shielded" : "devnet"}
+                      <Pill tone={r.cloakStatus === "settled" ? "positive" : "neutral"}>
+                        {r.cloakStatus === "settled" ? "shielded" : "approved"}
                       </Pill>
                     </li>
                   ))}
@@ -253,33 +253,16 @@ export default function DashboardPage() {
 }
 
 function NewInvoiceButton({ onCreated }: { onCreated: (inv: Invoice) => void }) {
-  const { pubkey } = useOrg();
-  const [busy, setBusy] = useState(false);
-
-  const handle = async () => {
-    const raw = prompt("Invoice amount in USD");
-    if (!raw) return;
-    const amount = Number(raw);
-    if (!Number.isFinite(amount) || amount <= 0) return alert("Invalid amount");
-    setBusy(true);
-    try {
-      const j = await api<{ invoice: Invoice }>(pubkey, "/api/invoices", {
-        method: "POST",
-        body: JSON.stringify({ amountUsd: amount, rail: "kirapay" }),
-      });
-      onCreated(j.invoice);
-      if (j.invoice.kiraLinkUrl) window.open(j.invoice.kiraLinkUrl, "_blank");
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  const [open, setOpen] = useState(false);
   return (
-    <Button variant="ghost" size="sm" onClick={handle} disabled={busy}>
-      {busy ? "Creating…" : "New invoice"}
-    </Button>
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        New invoice
+      </Button>
+      {open && (
+        <NewInvoiceDialog onClose={() => setOpen(false)} onCreated={onCreated} />
+      )}
+    </>
   );
 }
 

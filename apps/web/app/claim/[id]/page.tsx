@@ -62,9 +62,9 @@ export default function ClaimPage({ params }: Params) {
         </div>
 
         <div className="mt-7 flex items-center justify-between text-[11px] text-ink-3">
-          <span>chunk #{recipient.chunkIndex + 1} of {run.totalChunks}</span>
-          <Pill tone={run.cloakLive ? "positive" : "neutral"}>
-            {run.cloakLive ? "shielded · mainnet" : "shielded · devnet"}
+          <span>batch {recipient.chunkIndex + 1} of {run.totalChunks}</span>
+          <Pill tone={run.cloakStatus === "settled" ? "positive" : "neutral"}>
+            {run.cloakStatus === "settled" ? "shielded" : "approved"}
           </Pill>
         </div>
       </Card>

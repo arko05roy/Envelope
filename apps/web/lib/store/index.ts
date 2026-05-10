@@ -55,9 +55,10 @@ export interface PayrollRunRecord {
   totalUsd: number;
   totalLamports: string;
   totalChunks: number;
-  status: "settled" | "failed";
+  status: "approved" | "settled" | "failed";
   network: "devnet" | "mainnet-beta";
-  cloakLive: boolean;
+  /** Status of Cloak shielded settlement. */
+  cloakStatus: "settled" | "pending_mainnet";
   /** envelope-policy on-chain approval — set when policy is initialized. */
   policyApproval?: {
     signature: string;
@@ -73,7 +74,7 @@ export interface PayrollRunRecord {
     chunkIndex: number;
     encryptCiphertextId?: string;
   }>;
-  chunks: Array<{ index: number; recipientIds: string[]; signature: string; simulated: boolean }>;
+  chunks: Array<{ index: number; recipientIds: string[]; signature: string | null }>;
   createdAt: number;
 }
 

@@ -111,7 +111,7 @@ export async function executePayrollBatch(args: {
   const network = (process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet") as
     | "devnet"
     | "mainnet-beta";
-  const cloakLive = network === "mainnet-beta";
+  const cloakOnChain = network === "mainnet-beta";
 
   const runId = newId("run");
   const totalLamports = stealthEntries.reduce((s, e) => s + e.lamports, 0n);
@@ -153,9 +153,8 @@ export async function executePayrollBatch(args: {
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i]!;
-    let signature: string;
-    let simulated = false;
-    if (cloakLive) {
+    let signature: string | null = null;
+    if (cloakOnChain) {
       const groupTotal = group.reduce((s, e) => s + e.lamports, 0n);
       const txResult = (await transact(
         {
@@ -171,19 +170,9 @@ export async function executePayrollBatch(args: {
           walletPublicKey: signer.publicKey,
         },
       )) as { signature?: string };
-      signature = txResult.signature ?? "?";
-    } else {
-      // Cloak's shielded pool is mainnet-only; on devnet we still mint stealth
-      // keys & build the UTXOs (real cryptographic objects) but skip submission.
-      signature = `sim_${runId}_${i}`;
-      simulated = true;
+      signature = txResult.signature ?? null;
     }
-    chunks.push({
-      index: i,
-      recipientIds: group.map((e) => e.row.id),
-      signature,
-      simulated,
-    });
+    chunks.push({ index: i, recipientIds: group.map((e) => e.row.id), signature });
     for (const e of group) {
       recipients.push({
         contractorId: e.row.id,
@@ -204,9 +193,9 @@ export async function executePayrollBatch(args: {
     totalUsd: contractors.reduce((s, c) => s + c.monthlyUsd, 0),
     totalLamports: totalLamports.toString(),
     totalChunks: chunks.length,
-    status: "settled",
+    status: cloakOnChain ? "settled" : "approved",
+    cloakStatus: cloakOnChain ? "settled" : "pending_mainnet",
     network,
-    cloakLive,
     policyApproval,
     recipients,
     chunks,

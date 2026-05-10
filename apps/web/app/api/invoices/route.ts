@@ -3,12 +3,16 @@ import { z } from "zod";
 import { authResponse, requireWalletPubkey } from "@/lib/auth";
 import { getOrCreateOrg, listInvoices, newId, store, type Invoice } from "@/lib/store";
 import { createPaymentLink, solanaInvoice } from "@/lib/kirapay/client";
+import { createInvoicePayment } from "@/lib/dodo/client";
 
 export const runtime = "nodejs";
 
 const Body = z.object({
   amountUsd: z.number().positive(),
   rail: z.enum(["kirapay", "dodo"]).default("kirapay"),
+  customerEmail: z.string().email().optional(),
+  customerName: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export async function GET(req: Request) {
@@ -49,6 +53,19 @@ export async function POST(req: Request) {
       );
       invoice.kiraLinkUrl = link.data.url;
       invoice.kiraLinkCode = link.data.url.split("/").pop();
+    } else if (parsed.data.rail === "dodo") {
+      if (!parsed.data.customerEmail) {
+        return NextResponse.json({ error: "customerEmail required for dodo invoices" }, { status: 400 });
+      }
+      const payment = await createInvoicePayment({
+        invoiceId: id,
+        amountUsdCents: Math.round(parsed.data.amountUsd * 100),
+        customerEmail: parsed.data.customerEmail,
+        customerName: parsed.data.customerName,
+        description: parsed.data.description,
+      });
+      invoice.dodoSessionId = payment.paymentId;
+      invoice.dodoCheckoutUrl = payment.paymentLink;
     }
 
     store.invoices[id] = invoice;
