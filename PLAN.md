@@ -124,16 +124,25 @@ sol/                                    ← repo root
 - **Webhook verification:** verify HMAC against signing key before mutating any state.
 - **Risk:** low.
 
-### 3.3 KIRAPAY (medium confidence — docs auth-gated)
+### 3.3 KIRAPAY (high confidence — REST docs confirmed)
 
-- **Action item:** sign in to https://dashboard.kira-pay.com and pull API key + SDK reference. Docs at https://docs.kira-pay.com return 403 to anonymous fetches.
-- **Hypothesized integration shape (REST):**
-  - `POST /v1/intents` → create cross-chain payment intent (input: any token/chain, output: USDC on Solana, recipient: dWallet address, amount, callback URL)
-  - `GET /v1/intents/:id` → poll status
-  - Webhook on settlement
-- **Frontend:** redirect customer to KIRAPAY hosted checkout URL OR embed widget if SDK provides one.
-- **Risk:** medium-high until docs confirmed. Reach out to @kirapayofficial on X if blocked.
-- **Day-2 spike:** create one test intent end-to-end on testnet, settle to a Solana devnet wallet.
+- **Base:** `https://api.kira-pay.com/api` · **Auth:** `x-api-key` header (NOT Bearer)
+- **Endpoints used:**
+  - `POST /link/generate` → returns `{ url, price, originalPrice }`. Send `url` to customer.
+  - `GET /link/{code}` (public) → public link details for our checkout page.
+  - `GET /link/tokens/{chainId}` (public) → supported settlement tokens.
+  - `GET /wallet/transactions/status/{hash}` (public) → polling fallback.
+  - `POST /webhooks` (auth) → register `{ url, secret }`.
+- **Webhook events:** `transaction.created`, `transaction.succeeded`, `transaction.refund`.
+- **CRITICAL — Solana settlement caveat (from docs/payments/supported-chains-and-tokens):**
+  > "For Solana it only supports native token and use 'sol' as a chainId and 'SOL' as an address while generating payment links."
+  → **KIRAPAY cannot directly settle USDC on Solana.** Two paths:
+  - **Path A (default for v1):** Settle SOL on Solana to dWallet → Jupiter-swap to USDC on settlement webhook. Adds one swap step but keeps everything on Solana.
+  - **Path B (alt):** Settle USDC on Base (chainId 8453) to the dWallet's EVM address via Ika cross-chain custody. Funds live on Base; dWallet still controls them. Better demo of Ika's cross-chain story; requires Ika EVM signing to be stable.
+  - **Recommendation:** demo both — primary checkout uses Path A (simple), but show Path B in the cross-chain narrative. Both money flows visible in dashboard.
+- **Webhook signature:** HMAC-SHA256 of raw body using the `secret` we passed at registration → compare against `x-kirapay-signature`. (Algorithm/header inferred — verify against a real test event on D3 and adjust.)
+- **Risk:** low–medium. Settlement caveat constrains the architecture but doesn't break it.
+- **Day-3 spike:** create one test link via `POST /link/generate` with `tokenOut: { chainId: "sol", address: "SOL" }`, complete a payment from devnet, verify webhook fires.
 
 ### 3.4 Ika (medium confidence — Solana pre-alpha live)
 
@@ -213,7 +222,7 @@ Each sponsor's judges will read the README looking for THEIR test. Pre-emptive a
 |---|---|---|---|---|
 | 1 | Encrypt FHE compute on devnet doesn't run | High | Track score for Encrypt drops | Build last; one threshold check only; transparent README about pre-alpha plaintext |
 | 2 | Cloak batch tx exceeds Solana CU limit at N=30 | Med | Demo breaks | Spike D1; if needed chunk into batches of N=10 |
-| 3 | KIRAPAY docs/dashboard access blocks for hours | Med | D3 stalls | DM @kirapayofficial X & TG today; meanwhile stub the client with mock |
+| 3 | KIRAPAY only settles SOL (not USDC) on Solana → forced extra Jupiter swap step | Med | UX papercut; one more thing that can fail in demo | Pre-warm Jupiter route; if swap fails, show settled SOL balance and queue swap as "rebalancing" — still demoable |
 | 4 | Ika pre-alpha breaks during demo | Med | One track score drops | Test full flow night before; have backup video clip |
 | 5 | Surface area dilution — nothing feels deep | Med | All track scores drop | Cut treasury policy editor + audit dashboard to skeleton if behind schedule; payroll flow is the ONE thing polished |
 | 6 | Privy / wallet onboarding glitch on demo day | Low | Recording breaks | Have pre-funded test accounts + recorded fallback |
