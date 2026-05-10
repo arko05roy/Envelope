@@ -17,9 +17,21 @@ interface Treasury {
   usdc: number;
 }
 
+interface PolicyView {
+  owner: string;
+  dwallet: string;
+  dwalletBound: boolean;
+  monthlyCapLamports: string;
+  cosignersRequired: number;
+  batchesApproved: string;
+  lamportsApprovedThisPeriod: string;
+  periodStartUnix: string;
+}
+
 export default function DashboardPage() {
   const { connected, pubkey, org, loading: orgLoading, update } = useOrg();
   const [treasury, setTreasury] = useState<Treasury | null>(null);
+  const [policy, setPolicy] = useState<PolicyView | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [runs, setRuns] = useState<PayrollRunRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +41,13 @@ export default function DashboardPage() {
     setError(null);
     Promise.all([
       api<Treasury>(pubkey, "/api/treasury"),
+      api<{ policy: PolicyView | null }>(pubkey, "/api/policy"),
       api<{ invoices: Invoice[] }>(pubkey, "/api/invoices"),
       api<{ runs: PayrollRunRecord[] }>(pubkey, "/api/payroll/runs").catch(() => ({ runs: [] })),
     ])
-      .then(([t, inv, r]) => {
+      .then(([t, p, inv, r]) => {
         setTreasury(t);
+        setPolicy(p.policy);
         setInvoices(inv.invoices);
         setRuns(r.runs ?? []);
       })
@@ -136,8 +150,15 @@ export default function DashboardPage() {
             }
           />
           <Stat
-            label="Open invoices"
-            value={<span className="num">{invoices.filter((i) => i.status === "open").length}</span>}
+            label="Spent this period"
+            value={
+              policy ? (
+                <span className="num">
+                  ${(Number(policy.lamportsApprovedThisPeriod) / 1e9 * 500_000).toLocaleString()}
+                </span>
+              ) : <span className="text-ink-3">—</span>
+            }
+            hint={policy ? `of $${(Number(policy.monthlyCapLamports) / 1e9 * 500_000).toLocaleString()} cap · ${policy.batchesApproved} ${policy.batchesApproved === "1" ? "batch" : "batches"}` : undefined}
           />
         </div>
 

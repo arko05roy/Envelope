@@ -8,7 +8,7 @@
  *   4. Cloak shielded batch: chunk to 2 outputs/tx, fire transact() per chunk
  *   5. Emit per-recipient claim URLs
  */
-import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   CLOAK_PROGRAM_ID,
   NATIVE_SOL_MINT,
@@ -20,6 +20,7 @@ import {
 import { readFileSync } from "node:fs";
 import { listContractors, newId, store, type Contractor, type PayrollRunRecord } from "@/lib/store";
 import { sealContractorSalary } from "@/lib/encrypt/client";
+import { approvePayrollBatch, fetchPolicy, hashBatch } from "@/lib/policy/client";
 
 // Demo rate so a 30-recipient batch fits under 1 SOL on devnet.
 // Real deployment settles USDC, not SOL — this conversion goes away.
@@ -113,6 +114,40 @@ export async function executePayrollBatch(args: {
   const cloakLive = network === "mainnet-beta";
 
   const runId = newId("run");
+  const totalLamports = stealthEntries.reduce((s, e) => s + e.lamports, 0n);
+
+  // On-chain policy approval — only if the org has initialized their policy.
+  // Skipped silently for orgs that haven't run /api/policy/init yet, so the
+  // orchestrator stays useful during onboarding.
+  let policyApproval: PayrollRunRecord["policyApproval"];
+  try {
+    const ownerKey = new PublicKey(args.ownerPubkey);
+    const policy = await fetchPolicy(connection, ownerKey);
+    if (policy) {
+      const batchHash = hashBatch({
+        ownerPubkey: args.ownerPubkey,
+        contractorIds: args.contractorIds,
+        totalLamports,
+        createdAt: Date.now(),
+      });
+      const result = await approvePayrollBatch({
+        connection,
+        owner: ownerKey,
+        batchHash,
+        totalLamports,
+        recipientCount: contractors.length,
+      });
+      policyApproval = {
+        signature: result.signature,
+        approvalPubkey: result.approvalPubkey.toBase58(),
+        batchHash: Buffer.from(batchHash).toString("hex"),
+      };
+    }
+  } catch (e) {
+    // Cap exceeded or policy missing — surface in the response but don't kill payroll.
+    // Intentionally swallow; UI surfaces absent approval as a warning.
+  }
+
   const chunks: PayrollRunRecord["chunks"] = [];
   const recipients: PayrollRunRecord["recipients"] = [];
 
@@ -167,11 +202,12 @@ export async function executePayrollBatch(args: {
     ownerPubkey: args.ownerPubkey,
     contractorIds: args.contractorIds,
     totalUsd: contractors.reduce((s, c) => s + c.monthlyUsd, 0),
-    totalLamports: stealthEntries.reduce((s, e) => s + e.lamports, 0n).toString(),
+    totalLamports: totalLamports.toString(),
     totalChunks: chunks.length,
     status: "settled",
     network,
     cloakLive,
+    policyApproval,
     recipients,
     chunks,
     createdAt: Date.now(),

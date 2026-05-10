@@ -2,7 +2,7 @@
 name = "envelope-policy"
 version = "0.1.0"
 edition = "2021"
-description = "FHE-encrypted comp policy + threshold approval, Solana program (encrypt-anchor)"
+description = "Envelope policy program — controls an Ika dWallet for org treasury, gates payroll batch signing"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -10,12 +10,11 @@ name = "envelope_policy"
 
 [features]
 default = []
+cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
-cpi = ["no-entrypoint"]
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
-# Pin to whatever encrypt-anchor's published crate version is on devnet.
-# Verify on D5 against https://docs.encrypt.xyz/getting-started.
-anchor-lang = "0.30"
-# encrypt-anchor = { git = "https://github.com/encrypt-xyz/encrypt", branch = "main" }
+anchor-lang = "0.32.1"

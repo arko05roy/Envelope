@@ -1,0 +1,25 @@
+[toolchain]
+anchor_version = "0.32.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+envelope_policy = "7xVNMJycAC5sQo1MaJTn8gHrbHBtkmuTbpBjrkC1Jo1H"
+
+[programs.localnet]
+envelope_policy = "7xVNMJycAC5sQo1MaJTn8gHrbHBtkmuTbpBjrkC1Jo1H"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "echo skip"
+
+[workspace]
+members = ["programs/envelope-policy"]

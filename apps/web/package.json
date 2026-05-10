@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@cloak.dev/sdk": "latest",
+    "@coral-xyz/anchor": "^0.32.1",
     "@dodopayments/nextjs": "latest",
     "@encrypt.xyz/pre-alpha-solana-client": "^0.1.1",
     "@solana/spl-token": "^0.4.14",

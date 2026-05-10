@@ -1,0 +1,514 @@
+{
+  "address": "7xVNMJycAC5sQo1MaJTn8gHrbHBtkmuTbpBjrkC1Jo1H",
+  "metadata": {
+    "name": "envelope_policy",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Envelope policy program — controls an Ika dWallet for org treasury, gates payroll batch signing"
+  },
+  "instructions": [
+    {
+      "name": "approve_payroll_batch",
+      "docs": [
+        "Approve a payroll batch on-chain. Validates cap; produces a",
+        "`BatchApproval` PDA recording (batch_hash, total, count, ts).",
+        "Future: CPIs into Ika `approve_message` for dWallet signing."
+      ],
+      "discriminator": [
+        215,
+        87,
+        187,
+        35,
+        122,
+        158,
+        99,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "approval",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  112,
+                  112,
+                  114,
+                  111,
+                  118,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "policy"
+              },
+              {
+                "kind": "arg",
+                "path": "batch_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "batch_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "total_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "recipient_count",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "bind_dwallet",
+      "docs": [
+        "Bind an Ika dWallet to this org's policy. The dWallet's authority must",
+        "have been transferred to this program's `__ika_cpi_authority` PDA."
+      ],
+      "discriminator": [
+        177,
+        161,
+        24,
+        131,
+        152,
+        105,
+        21,
+        2
+      ],
+      "accounts": [
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "dwallet",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "init_policy",
+      "docs": [
+        "Initialize policy for an org keyed by `owner` wallet pubkey."
+      ],
+      "discriminator": [
+        45,
+        234,
+        110,
+        100,
+        209,
+        146,
+        191,
+        86
+      ],
+      "accounts": [
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "monthly_cap_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "cosigners",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "update_cap",
+      "docs": [
+        "Update the monthly spending cap."
+      ],
+      "discriminator": [
+        252,
+        41,
+        246,
+        151,
+        226,
+        149,
+        109,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "monthly_cap_lamports",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BatchApproval",
+      "discriminator": [
+        25,
+        224,
+        18,
+        143,
+        101,
+        253,
+        152,
+        169
+      ]
+    },
+    {
+      "name": "Policy",
+      "discriminator": [
+        222,
+        135,
+        7,
+        163,
+        235,
+        177,
+        33,
+        68
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BatchApproved",
+      "discriminator": [
+        101,
+        104,
+        223,
+        252,
+        224,
+        36,
+        8,
+        35
+      ]
+    },
+    {
+      "name": "DWalletBound",
+      "discriminator": [
+        208,
+        175,
+        138,
+        119,
+        133,
+        15,
+        176,
+        3
+      ]
+    },
+    {
+      "name": "PolicyInitialized",
+      "discriminator": [
+        102,
+        184,
+        59,
+        178,
+        235,
+        69,
+        251,
+        181
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidCosignerCount",
+      "msg": "Cosigner count must be at least 1"
+    },
+    {
+      "code": 6001,
+      "name": "CapExceeded",
+      "msg": "Payroll batch would exceed the monthly cap"
+    },
+    {
+      "code": 6002,
+      "name": "Overflow",
+      "msg": "Lamport overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "BatchApproval",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy",
+            "type": "pubkey"
+          },
+          {
+            "name": "batch_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "total_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "recipient_count",
+            "type": "u32"
+          },
+          {
+            "name": "approved_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BatchApproved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy",
+            "type": "pubkey"
+          },
+          {
+            "name": "batch_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "total_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "recipient_count",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DWalletBound",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "dwallet",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Policy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "dwallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "monthly_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "cosigners_required",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "batches_approved",
+            "type": "u64"
+          },
+          {
+            "name": "lamports_approved_this_period",
+            "type": "u64"
+          },
+          {
+            "name": "period_start_unix",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "cap",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

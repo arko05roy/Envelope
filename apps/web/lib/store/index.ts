@@ -58,6 +58,12 @@ export interface PayrollRunRecord {
   status: "settled" | "failed";
   network: "devnet" | "mainnet-beta";
   cloakLive: boolean;
+  /** envelope-policy on-chain approval — set when policy is initialized. */
+  policyApproval?: {
+    signature: string;
+    approvalPubkey: string;
+    batchHash: string;
+  };
   recipients: Array<{
     contractorId: string;
     name: string;
