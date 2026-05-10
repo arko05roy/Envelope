@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@cloak.dev/sdk": "latest",
+    "@dodopayments/nextjs": "latest",
     "@privy-io/react-auth": "^2.0.0",
     "@solana/web3.js": "^1.98.0",
     "dodopayments": "latest",
+    "standardwebhooks": "^1.0.0",
     "next": "^14.2.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

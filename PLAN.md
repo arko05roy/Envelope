@@ -114,14 +114,21 @@ sol/                                    ← repo root
 
 ### 3.2 Dodo Payments (high confidence — public docs)
 
-- **Install:** `npm install dodopayments`
-- **Init:** `const client = new DodoPayments({ bearerToken: process.env.DODO_API_KEY })`
+- **Install:** `pnpm add dodopayments @dodopayments/nextjs standardwebhooks`
+- **Init:**
+  ```ts
+  new DodoPayments({
+    bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+    environment: process.env.DODO_PAYMENTS_ENVIRONMENT, // 'test_mode' | 'live_mode'
+  })
+  ```
+- **Hosts:** test → `https://test.dodopayments.com` · live → `https://live.dodopayments.com`
 - **Endpoints we call:**
-  - `POST /payments` — create one-time charge (for invoice fiat fallback)
-  - `POST /subscriptions` — Envelope's own SaaS subscription billing
-  - `GET /webhook-signing-key` — for verification
-- **Stablecoin support:** Dodo confirms stablecoin acceptance "worldwide (excluding India)" — Solana settlement details require their support contact, but for hackathon: use card → USD payout to Envelope account → manual wire to dWallet OR direct stablecoin payment from supported regions.
-- **Webhook verification:** verify HMAC against signing key before mutating any state.
+  - `client.checkoutSessions.create({...})` — fiat invoice fallback for end-customers (returns redirect URL)
+  - `client.subscriptions.create({...})` — Envelope's own SaaS subscription billing
+- **Webhooks:** Standard Webhooks spec ([standardwebhooks.com](https://standardwebhooks.com/)). Headers: `webhook-id`, `webhook-timestamp`, `webhook-signature`. Verify with `new Webhook(secret).verify(rawBody, headers)`.
+- **Webhook events (per docs):** `payment.succeeded` / `payment.failed` / `payment.processing` / `payment.cancelled`, `subscription.active` / `.renewed` / `.cancelled` / `.on_hold` / `.plan_changed` / `.failed` / `.updated`, `refund.succeeded` / `.failed`, `dispute.opened` / `.won` / `.lost` etc.
+- **Env vars (matched to Dodo's adaptor convention):** `DODO_PAYMENTS_API_KEY`, `DODO_PAYMENTS_WEBHOOK_KEY` (the `whsec_…` from the endpoint detail page), `DODO_PAYMENTS_ENVIRONMENT`, `DODO_PAYMENTS_RETURN_URL`.
 - **Risk:** low.
 
 ### 3.3 KIRAPAY (high confidence — REST docs confirmed)

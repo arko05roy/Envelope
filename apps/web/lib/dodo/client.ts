@@ -1,17 +1,16 @@
 /**
  * Dodo Payments SDK wrapper.
  *
- * Install:  npm install dodopayments
- * Docs:     https://docs.dodopayments.com
+ * SDK:    `dodopayments` (server-side)
+ * Adapter: `@dodopayments/nextjs` for App Router checkout/portal/webhooks
+ * Docs:    https://docs.dodopayments.com
  *
- * What we use:
- *   1. One-time payments — fiat invoice fallback for end-customers (POST /payments).
- *   2. Subscriptions — Envelope's own SaaS billing for the org (POST /subscriptions).
- *   3. Webhooks — verify HMAC against signing key, then update invoice/sub state.
+ * Webhooks follow the Standard Webhooks spec (https://standardwebhooks.com/),
+ * compatible with Svix. We use the `standardwebhooks` package directly for
+ * verification. Headers: `webhook-id`, `webhook-timestamp`, `webhook-signature`.
  *
- * Stablecoin acceptance: confirmed available "worldwide (excluding India)".
- * Solana settlement specifics: confirm with Dodo support; for v1 demo, use
- * card → Envelope account → manual rebalance to dWallet (acceptable for hackathon).
+ * Test mode hosts:  https://test.dodopayments.com
+ * Live mode hosts:  https://live.dodopayments.com
  */
 import DodoPayments from "dodopayments";
 
@@ -19,80 +18,48 @@ let _client: DodoPayments | null = null;
 
 export function dodo(): DodoPayments {
   if (_client) return _client;
-  const bearerToken = process.env.DODO_API_KEY;
-  if (!bearerToken) throw new Error("DODO_API_KEY not set");
-  _client = new DodoPayments({ bearerToken });
+  const bearerToken = process.env.DODO_PAYMENTS_API_KEY;
+  if (!bearerToken) throw new Error("DODO_PAYMENTS_API_KEY not set");
+  _client = new DodoPayments({
+    bearerToken,
+    environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as "test_mode" | "live_mode",
+  });
   return _client;
 }
 
-export interface CreateInvoicePaymentInput {
+export interface CreateInvoiceCheckoutInput {
   invoiceId: string;
   amountUsdCents: number;
   customerEmail: string;
-  description: string;
-}
-
-export async function createInvoicePayment(input: CreateInvoicePaymentInput) {
-  // TODO(D4): confirm exact field names from dodopayments TS SDK.
-  return dodo().payments.create({
-    payment_link: true,
-    billing: { country: "US" },
-    customer: { email: input.customerEmail },
-    product_cart: [
-      { product_id: "envelope-invoice", quantity: 1, amount: input.amountUsdCents },
-    ],
-    metadata: { invoiceId: input.invoiceId, description: input.description },
-  } as never);
+  customerName?: string;
+  productId: string;
+  description?: string;
 }
 
 /**
- * Verify a Dodo webhook (Svix scheme).
- *
- * Dodo's dashboard runs on Svix. Signing is:
- *   signed_payload = `${svix_id}.${svix_timestamp}.${rawBody}`
- *   signature      = base64( HMAC-SHA256(secret_bytes, signed_payload) )
- *   header         = "v1,<sig>"  (multiple comma-space separated values possible
- *                     when secrets are rotated; any one match passes)
- *
- * The signing secret in DODO_WEBHOOK_SIGNING_KEY starts with `whsec_`; the bytes
- * are base64 of everything after that prefix.
- *
- * Reject if the timestamp is older than 5 minutes (replay protection).
+ * Create a one-off checkout session for an invoice.
+ * Returns a redirect URL to send the customer to.
  */
-import { createHmac, timingSafeEqual } from "node:crypto";
+export async function createInvoiceCheckout(input: CreateInvoiceCheckoutInput) {
+  return dodo().checkoutSessions.create({
+    product_cart: [{ product_id: input.productId, quantity: 1 }],
+    customer: { email: input.customerEmail, name: input.customerName ?? "" },
+    return_url: process.env.DODO_PAYMENTS_RETURN_URL,
+    metadata: { invoiceId: input.invoiceId, description: input.description ?? "" },
+  } as never);
+}
 
-export function verifyDodoWebhook(rawBody: string, headers: Headers): boolean {
-  const secret = process.env.DODO_WEBHOOK_SIGNING_KEY;
-  const id = headers.get("svix-id");
-  const timestamp = headers.get("svix-timestamp");
-  const sigHeader = headers.get("svix-signature");
-  if (!secret || !id || !timestamp || !sigHeader) return false;
-
-  const ts = Number(timestamp);
-  if (!Number.isFinite(ts)) return false;
-  const ageSec = Math.abs(Date.now() / 1000 - ts);
-  if (ageSec > 300) return false;
-
-  const stripped = secret.startsWith("whsec_") ? secret.slice(6) : secret;
-  let secretBytes: Buffer;
-  try {
-    secretBytes = Buffer.from(stripped, "base64");
-  } catch {
-    return false;
-  }
-
-  const signedPayload = `${id}.${timestamp}.${rawBody}`;
-  const expected = createHmac("sha256", secretBytes).update(signedPayload).digest("base64");
-
-  // Header may contain multiple "v1,sig" entries separated by spaces.
-  return sigHeader.split(" ").some((entry) => {
-    const [version, sig] = entry.split(",");
-    if (version !== "v1" || !sig) return false;
-    if (sig.length !== expected.length) return false;
-    try {
-      return timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
-    } catch {
-      return false;
-    }
-  });
+/** Subscribe an org to Envelope's own SaaS plan (used by /api/billing/subscribe). */
+export async function subscribeOrg(input: {
+  orgId: string;
+  customerId: string;
+  productId?: string;
+}) {
+  const productId = input.productId ?? process.env.DODO_PRODUCT_ID_SUBSCRIPTION;
+  if (!productId) throw new Error("DODO_PRODUCT_ID_SUBSCRIPTION not set");
+  return dodo().subscriptions.create({
+    customer_id: input.customerId,
+    product_id: productId,
+    metadata: { orgId: input.orgId },
+  } as never);
 }
