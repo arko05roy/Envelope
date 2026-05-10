@@ -1,0 +1,21 @@
+[package]
+name = "envelope-policy"
+version = "0.1.0"
+edition = "2021"
+description = "FHE-encrypted comp policy + threshold approval, Solana program (encrypt-anchor)"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "envelope_policy"
+
+[features]
+default = []
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+
+[dependencies]
+# Pin to whatever encrypt-anchor's published crate version is on devnet.
+# Verify on D5 against https://docs.encrypt.xyz/getting-started.
+anchor-lang = "0.30"
+# encrypt-anchor = { git = "https://github.com/encrypt-xyz/encrypt", branch = "main" }
