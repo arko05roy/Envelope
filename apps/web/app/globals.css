@@ -3,7 +3,48 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --paper: #F7F4EE;
+  --paper-2: #FBF9F4;
+  --ink: #1A1A1A;
+  --ink-2: #5C5648;
 }
 
-html, body { background: #0b0c10; color: #e8eaee; }
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular numerals for all currency / hash / quantity displays */
+.num, .num * {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Subtle paper grain on the body — almost imperceptible, kills the
+   "blank screen" glare on long sessions. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(26, 26, 26, 0.018) 1px, transparent 1px);
+  background-size: 3px 3px;
+  z-index: 0;
+}
+
+/* Selection */
+::selection {
+  background: rgba(42, 61, 95, 0.18);
+  color: var(--ink);
+}
+
+/* Focus ring — deliberate, not browser default */
+:focus-visible {
+  outline: 2px solid #2A3D5F;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

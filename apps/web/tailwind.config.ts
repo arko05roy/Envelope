@@ -1,20 +1,56 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        envelope: {
-          bg: "#0b0c10",
-          surface: "#13151c",
-          border: "#2a2d36",
-          accent: "#9ad0ff",
-          good: "#9af0c1",
+        paper: {
+          DEFAULT: "#F7F4EE",
+          2: "#FBF9F4",
+          3: "#F2EDE3",
         },
+        ink: {
+          DEFAULT: "#1A1A1A",
+          2: "#5C5648",
+          3: "#9A9486",
+          4: "#BDB6A6",
+        },
+        rule: {
+          DEFAULT: "#E8E2D8",
+          strong: "#D6CFC1",
+        },
+        accent: {
+          DEFAULT: "#2A3D5F",
+          soft: "#EAE8F0",
+          ink: "#1B2A45",
+        },
+        positive: { DEFAULT: "#5C7A5A", soft: "#E8EFE5" },
+        warning: { DEFAULT: "#A36B4A", soft: "#F5EAE0" },
+        negative: { DEFAULT: "#8B3A3A", soft: "#F3E1E1" },
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+      },
+      letterSpacing: {
+        tightest: "-0.04em",
+        tighter: "-0.025em",
+        tight: "-0.015em",
+      },
+      borderRadius: {
+        DEFAULT: "6px",
+        lg: "10px",
+        xl: "14px",
+      },
+      boxShadow: {
+        card: "0 1px 0 rgba(26, 26, 26, 0.04), 0 4px 16px -8px rgba(26, 26, 26, 0.06)",
+        lift: "0 1px 0 rgba(26, 26, 26, 0.06), 0 12px 32px -16px rgba(26, 26, 26, 0.10)",
+      },
+      transitionTimingFunction: {
+        out: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        in: "cubic-bezier(0.4, 0, 0.6, 1)",
       },
     },
   },
