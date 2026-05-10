@@ -11,20 +11,34 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import {
   Record as SnsRecordEnum,
-  getDomainKeySync,
+  devnet as snsDevnet,
+  getDomainKeySync as getDomainKeySyncMainnet,
   getRecordV2,
   resolve,
-  reverseLookup,
-  getAllDomains,
-  getPrimaryDomain,
+  reverseLookup as reverseLookupMainnet,
+  getAllDomains as getAllDomainsMainnet,
+  getPrimaryDomain as getPrimaryDomainMainnet,
 } from "@bonfida/spl-name-service";
 
+// Devnet has its own ROOT_DOMAIN_ACCOUNT, so domain key derivation differs
+// between clusters even though the program ID is identical. Pick the right
+// helper for the cluster you're querying.
+const getDomainKeyFor = (cluster: SnsCluster) =>
+  cluster === "devnet" ? snsDevnet.utils.getDomainKeySync : getDomainKeySyncMainnet;
+const reverseLookupFor = (cluster: SnsCluster) =>
+  cluster === "devnet" ? snsDevnet.utils.reverseLookup : reverseLookupMainnet;
+const getPrimaryDomainFor = (cluster: SnsCluster) =>
+  cluster === "devnet" ? snsDevnet.utils.getPrimaryDomain : getPrimaryDomainMainnet;
+
+// NEXT_PUBLIC_HELIUS_RPC_URL is the app's primary cluster (devnet in this
+// project), so don't reuse it as the mainnet fallback — it would silently
+// route mainnet `.sol` resolution to a devnet RPC and return null.
 const MAINNET_RPC =
-  process.env.HELIUS_MAINNET_RPC_URL ??
-  process.env.NEXT_PUBLIC_HELIUS_RPC_URL ??
-  "https://api.mainnet-beta.solana.com";
+  process.env.HELIUS_MAINNET_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 const DEVNET_RPC =
-  process.env.HELIUS_DEVNET_RPC_URL ?? "https://api.devnet.solana.com";
+  process.env.HELIUS_DEVNET_RPC_URL ??
+  process.env.NEXT_PUBLIC_HELIUS_RPC_URL ??
+  "https://api.devnet.solana.com";
 
 export type SnsCluster = "mainnet" | "devnet";
 
@@ -63,22 +77,25 @@ export async function resolveSnsHandle(
 ): Promise<ResolvedSns | null> {
   if (!isValidSnsHandle(handle)) return null;
   const cluster = opts?.cluster ?? clusterFor(handle);
-  try {
-    const owner = await resolve(conn(cluster), handle);
-    return { pubkey: owner.toBase58(), cluster };
-  } catch {
-    // SNS-IP-5 `resolve` requires a SOL Record + RoA on the domain. Freshly
-    // bootstrapped devnet domains often have neither, so fall back to the
-    // raw NameRegistry owner field at offset 32..64.
+  // SNS-IP-5 `resolve` lives in the mainnet module; on devnet we rely on the
+  // raw NameRegistry owner field instead, which is what fresh bootstrap
+  // domains have anyway (no SOL Record / RoA yet).
+  if (cluster === "mainnet") {
     try {
-      const { pubkey } = getDomainKeySync(handle);
-      const info = await conn(cluster).getAccountInfo(pubkey);
-      if (!info || info.data.length < 96) return null;
-      const owner = new PublicKey(info.data.slice(32, 64));
+      const owner = await resolve(conn(cluster), handle);
       return { pubkey: owner.toBase58(), cluster };
     } catch {
-      return null;
+      // fall through to raw lookup
     }
+  }
+  try {
+    const { pubkey } = getDomainKeyFor(cluster)(handle);
+    const info = await conn(cluster).getAccountInfo(pubkey);
+    if (!info || info.data.length < 96) return null;
+    const owner = new PublicKey(info.data.slice(32, 64));
+    return { pubkey: owner.toBase58(), cluster };
+  } catch {
+    return null;
   }
 }
 
@@ -89,7 +106,7 @@ export async function reverseLookupPubkey(
   const cluster = opts?.cluster ?? "mainnet";
   try {
     const owner = new PublicKey(pubkey);
-    const primary = await getPrimaryDomain(conn(cluster), owner);
+    const primary = await getPrimaryDomainFor(cluster)(conn(cluster), owner);
     if (primary?.reverse) return `${primary.reverse}.sol`;
   } catch {}
   return null;
@@ -102,9 +119,12 @@ export async function getAllDomainsForOwner(
   const cluster = opts?.cluster ?? "mainnet";
   try {
     const owner = new PublicKey(pubkey);
-    const keys = await getAllDomains(conn(cluster), owner);
+    // getAllDomains is mainnet-only in the SDK; on devnet we'd need a custom
+    // getProgramAccounts call. Skip for now — not on the demo critical path.
+    if (cluster === "devnet") return [];
+    const keys = await getAllDomainsMainnet(conn(cluster), owner);
     const names = await Promise.all(
-      keys.map((k) => reverseLookup(conn(cluster), k).catch(() => null)),
+      keys.map((k) => reverseLookupFor(cluster)(conn(cluster), k).catch(() => null)),
     );
     return names.filter((n): n is string => Boolean(n)).map((n) => `${n}.sol`);
   } catch {

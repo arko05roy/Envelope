@@ -4,13 +4,15 @@
  * Run: pnpm sns:bootstrap
  *
  * Prereqs:
- *   - Solana CLI keypair at $SOLANA_KEYPAIR_PATH with 0.5+ SOL on devnet
+ *   - Solana CLI keypair at $SOLANA_KEYPAIR_PATH funded on devnet
  *     (`solana airdrop 5 -u devnet`)
+ *   - ~0.5 SOL covers the parent registration + 5 subdomain rent
  *
  * What it does:
- *   1. Registers `envelope.sol` on devnet via the low-level createNameRegistry
- *      binding (rent-only, no USDC).
- *   2. Creates demo subdomains:
+ *   1. Wraps 0.01 SOL into a WSOL ATA (used as registration payment).
+ *   2. Registers `envelope.sol` on devnet via registerDomainNameV2 with
+ *      NATIVE_MINT (wrapped SOL).
+ *   3. Creates demo subdomains via createSubdomain (parent owner = signer):
  *        alice.envelope.sol
  *        bob.envelope.sol
  *        carol.envelope.sol
@@ -23,9 +25,16 @@ import {
   Connection,
   Keypair,
   PublicKey,
+  SystemProgram,
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
+import {
+  NATIVE_MINT,
+  createAssociatedTokenAccountIdempotentInstruction,
+  createSyncNativeInstruction,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
 import { devnet } from "@bonfida/spl-name-service";
 import { readFileSync } from "node:fs";
 
@@ -34,6 +43,7 @@ const PARENT = "envelope";
 const SUBS = ["alice", "bob", "carol", "dev", "payroll-agent"];
 const PARENT_SPACE = 1_000;
 const SUB_SPACE = 1_000;
+const WRAP_LAMPORTS = 10_000_000; // 0.01 SOL into WSOL
 
 async function exists(conn: Connection, pubkey: PublicKey): Promise<boolean> {
   const info = await conn.getAccountInfo(pubkey);
@@ -51,27 +61,51 @@ async function main() {
   console.log("balance:", (await conn.getBalance(signer.publicKey)) / 1e9, "SOL");
   console.log("rpc:", RPC);
 
-  // Parent: envelope.sol
+  // 1. Parent: envelope.sol via registerDomainNameV2 with WSOL.
   const parentKey = devnet.utils.getDomainKeySync(PARENT).pubkey;
   console.log(`\n${PARENT}.sol => ${parentKey.toBase58()}`);
   if (await exists(conn, parentKey)) {
     console.log("  already registered, skipping");
   } else {
-    const ix = await devnet.bindings.createNameRegistry(
+    const wsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, signer.publicKey);
+    const setupIxs = [
+      createAssociatedTokenAccountIdempotentInstruction(
+        signer.publicKey,
+        wsolAta,
+        signer.publicKey,
+        NATIVE_MINT,
+      ),
+      SystemProgram.transfer({
+        fromPubkey: signer.publicKey,
+        toPubkey: wsolAta,
+        lamports: WRAP_LAMPORTS,
+      }),
+      createSyncNativeInstruction(wsolAta),
+    ];
+    const setupSig = await sendAndConfirmTransaction(
+      conn,
+      new Transaction().add(...setupIxs),
+      [signer],
+    );
+    console.log("  wrapped SOL:", setupSig);
+
+    const regIxs = await devnet.bindings.registerDomainNameV2(
       conn,
       PARENT,
       PARENT_SPACE,
       signer.publicKey,
-      signer.publicKey,
-      undefined,
-      undefined,
-      devnet.constants.ROOT_DOMAIN_ACCOUNT,
+      wsolAta,
+      NATIVE_MINT,
     );
-    const sig = await sendAndConfirmTransaction(conn, new Transaction().add(ix), [signer]);
+    const sig = await sendAndConfirmTransaction(
+      conn,
+      new Transaction().add(...regIxs),
+      [signer],
+    );
     console.log("  registered:", sig);
   }
 
-  // Subdomains
+  // 2. Subdomains.
   for (const sub of SUBS) {
     const fqdn = `${sub}.${PARENT}`;
     const subKey = devnet.utils.getDomainKeySync(fqdn).pubkey;
@@ -87,10 +121,12 @@ async function main() {
         signer.publicKey,
         SUB_SPACE,
       );
-      const flat = ixs.flat();
+      const flat = (ixs as unknown as { length: number }[]).flat
+        ? (ixs as unknown as TransactionInstruction[][]).flat()
+        : (ixs as unknown as TransactionInstruction[]);
       const sig = await sendAndConfirmTransaction(
         conn,
-        new Transaction().add(...flat),
+        new Transaction().add(...(flat as TransactionInstruction[])),
         [signer],
       );
       console.log("registered:", sig);
@@ -101,6 +137,8 @@ async function main() {
 
   console.log("\ndone. demo handles ready on devnet.");
 }
+
+import type { TransactionInstruction } from "@solana/web3.js";
 
 main().catch((e) => {
   console.error(e);
