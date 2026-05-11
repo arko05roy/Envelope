@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Envelope — Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #F7F4EE;
+    --paper-2: #FBF9F4;
+    --paper-3: #F2EDE3;
+    --ink: #1A1A1A;
+    --ink-2: #5C5648;
+    --ink-3: #9A9486;
+    --ink-4: #BDB6A6;
+    --rule: #E8E2D8;
+    --rule-strong: #D6CFC1;
+    --accent: #2A3D5F;
+    --accent-ink: #1B2A45;
+    --accent-soft: #EAE8F0;
+    --positive: #5C7A5A;
+    --positive-soft: #E8EFE5;
+    --warning: #A36B4A;
+    --warning-soft: #F5EAE0;
+    --negative: #8B3A3A;
+    --negative-soft: #F3E1E1;
+    --display: "Fraunces", Georgia, serif;
+    --sans: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--ink);
+    font-family: var(--sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+  }
+
+  /* The deck "page": fixed 16:9, scaled to fit. */
+  .deck {
+    width: 1280px;
+    height: 720px;
+    position: relative;
+    transform-origin: center center;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    background: var(--paper);
+    border-radius: 14px;
+    overflow: hidden;
+    padding: 64px 76px;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 24px 80px -20px rgba(0,0,0,0.5);
+  }
+  .slide.active { display: flex; animation: slideIn 0.4s cubic-bezier(0.2,0.8,0.2,1) both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* paper grain */
+  .slide::before {
+    content: "";
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(26,26,26,0.022) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .slide > * { position: relative; }
+
+  /* hairline accent at top of every slide */
+  .slide::after {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(42,61,95,0.45), transparent);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: inline-flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--ink-3); }
+
+  h1.title {
+    font-family: var(--display);
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    line-height: 1.0;
+  }
+  h2.head {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 46px;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    color: var(--ink);
+  }
+  h2.head .muted { color: var(--ink-3); }
+  .lede {
+    font-size: 19px; line-height: 1.55; color: var(--ink-2); max-width: 50ch;
+  }
+  .mono { font-family: var(--mono); }
+  .num  { font-variant-numeric: tabular-nums; }
+  .accent-text { color: var(--accent-ink); }
+  .strike { text-decoration: line-through; text-decoration-color: var(--negative); color: var(--ink-3); }
+
+  .footline {
+    position: absolute; left: 76px; right: 76px; bottom: 26px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--ink-4);
+  }
+  .logo-wordmark { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-family: var(--sans); font-size: 13px; }
+  .logo-wordmark svg { width: 16px; height: 16px; }
+
+  /* layout helpers */
+  .col { display: flex; flex-direction: column; }
+  .grow { flex: 1; }
+  .spread { display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; }
+  .center { display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; height: 100%; }
+  .mt-auto { margin-top: auto; }
+
+  /* cards */
+  .card {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .card .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+  .card .v { font-family: var(--display); font-weight: 500; font-size: 30px; line-height: 1; margin-top: 10px; letter-spacing: -0.02em; }
+  .card .d { font-size: 13px; color: var(--ink-2); margin-top: 10px; line-height: 1.5; }
+
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 999px;
+    background: var(--paper-3); color: var(--ink-2); border: 1px solid var(--rule);
+  }
+  .pill.accent { background: var(--accent-soft); color: var(--accent-ink); border-color: rgba(42,61,95,0.18); }
+  .pill.pos { background: var(--positive-soft); color: var(--positive); border-color: rgba(92,122,90,0.25); }
+  .pill.warn { background: var(--warning-soft); color: var(--warning); border-color: rgba(163,107,74,0.25); }
+  .dot { width: 4px; height: 4px; border-radius: 999px; background: var(--ink-4); display: inline-block; }
+
+  ul.checks { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  ul.checks li { display: flex; gap: 12px; font-size: 16px; line-height: 1.45; color: var(--ink); }
+  ul.checks li b { font-weight: 600; }
+  ul.checks .mk { color: var(--accent); font-family: var(--mono); font-size: 13px; flex-shrink: 0; padding-top: 2px; }
+  ul.checks .mk.bad { color: var(--negative); }
+
+  /* loop / steps */
+  .steps { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 0; }
+  .step { background: var(--paper-2); border: 1px solid var(--rule); border-radius: 12px; padding: 20px 22px; }
+  .step .n { font-family: var(--display); font-size: 22px; color: var(--ink-4); }
+  .step h3 { font-family: var(--display); font-weight: 500; font-size: 21px; margin-top: 8px; letter-spacing: -0.01em; }
+  .step p { font-size: 13.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.5; }
+  .step .tags { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .step .tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; padding: 3px 7px; border-radius: 6px; background: var(--paper-3); color: var(--ink-2); }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--ink-4); font-size: 22px; width: 34px; }
+
+  /* protocol rows */
+  .prow { display: flex; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--rule); }
+  .prow:last-child { border-bottom: 0; }
+  .prow .badge { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex-shrink: 0; }
+  .prow .nm { width: 150px; flex-shrink: 0; font-weight: 600; font-size: 15px; }
+  .prow .ds { color: var(--ink-2); font-size: 14px; line-height: 1.4; }
+
+  /* comparison table */
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.cmp th, table.cmp td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--rule); }
+  table.cmp thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+  table.cmp td.feat { color: var(--ink-2); }
+  table.cmp .yes { color: var(--positive); font-weight: 600; }
+  table.cmp .no  { color: var(--ink-4); }
+  table.cmp tr.us { background: var(--accent-soft); }
+  table.cmp tr.us td { border-bottom-color: rgba(42,61,95,0.18); }
+  table.cmp tr.us td:first-child { font-weight: 600; color: var(--accent-ink); }
+  table.cmp tr.us .yes { color: var(--accent-ink); }
+
+  /* TAM rings */
+  .tam-wrap { display: flex; align-items: center; gap: 44px; }
+  .rings { position: relative; width: 290px; height: 290px; flex-shrink: 0; }
+  .ring { position: absolute; border-radius: 999px; display: flex; align-items: flex-start; justify-content: center; }
+  .ring.tam { inset: 0; background: var(--paper-3); border: 1px solid var(--rule-strong); }
+  .ring.sam { width: 200px; height: 200px; left: 45px; top: 56px; background: var(--accent-soft); border: 1px solid rgba(42,61,95,0.2); }
+  .ring.som { width: 104px; height: 104px; left: 93px; top: 110px; background: var(--accent); }
+  .ring .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; padding-top: 10px; }
+  .ring.tam .lbl { color: var(--ink-3); }
+  .ring.sam .lbl { color: var(--accent-ink); }
+  .ring.som .lbl { color: #fff; padding-top: 14px; }
+  .tam-list { display: flex; flex-direction: column; gap: 18px; }
+  .tam-list .row .t { font-family: var(--display); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+  .tam-list .row .s { font-size: 13.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.45; max-width: 46ch; }
+  .tam-list .row .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+
+  .quote {
+    font-family: var(--display); font-weight: 400; font-size: 30px; line-height: 1.3; letter-spacing: -0.01em; color: var(--ink);
+    max-width: 24ch;
+  }
+
+  .big-stat { font-family: var(--display); font-weight: 500; font-size: 64px; line-height: 0.95; letter-spacing: -0.03em; }
+  .big-stat .u { font-family: var(--sans); font-size: 18px; color: var(--ink-3); font-weight: 400; }
+
+  .src { font-family: var(--mono); font-size: 10px; color: var(--ink-4); letter-spacing: 0.04em; }
+
+  /* progress dots */
+  .progress {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 7px; z-index: 30;
+  }
+  .progress .pd { width: 6px; height: 6px; border-radius: 999px; background: rgba(247,244,238,0.28); transition: all 0.2s; cursor: pointer; }
+  .progress .pd.on { background: var(--paper); width: 22px; }
+
+  .counter {
+    position: fixed; bottom: 14px; right: 18px; z-index: 30;
+    font-family: var(--mono); font-size: 11px; color: rgba(247,244,238,0.5); letter-spacing: 0.08em;
+  }
+  .hint {
+    position: fixed; bottom: 14px; left: 18px; z-index: 30;
+    font-family: var(--mono); font-size: 10.5px; color: rgba(247,244,238,0.32); letter-spacing: 0.06em;
+  }
+
+  /* presenter notes */
+  .notes-panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: rgba(15,15,15,0.96); color: #d8d2c6; border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 18px 26px 22px; font-size: 14px; line-height: 1.55; max-height: 42vh; overflow-y: auto;
+    display: none;
+  }
+  .notes-panel.show { display: block; }
+  .notes-panel h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8478; margin-bottom: 8px; }
+  .notes-panel .objection { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); color: #c2bbac; }
+  .notes-panel .objection b { color: #e3dccd; }
+
+  @page { size: 1280px 720px; margin: 0; }
+  @media print {
+    html, body {
+      margin: 0; padding: 0; background: #fff; overflow: visible; height: auto;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;
+    }
+    .stage { position: static !important; inset: auto !important; padding: 0 !important; display: block !important; transform: none !important; }
+    .deck  { position: static !important; transform: none !important; width: 1280px !important; height: auto !important; margin: 0 !important; }
+    .slide {
+      display: flex !important; flex-direction: column;
+      position: static !important; inset: auto !important;
+      width: 1280px !important; height: 720px !important; flex: none !important;
+      box-shadow: none !important; border-radius: 0 !important; overflow: hidden;
+      page-break-inside: avoid; break-inside: avoid;
+      page-break-after: always; break-after: page;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .slide:last-of-type { page-break-after: auto; break-after: auto; }
+    .progress, .counter, .hint, .notes-panel, .notes { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="deck" id="deck">
+
+    <!-- 1 · TITLE -->
+    <section class="slide" data-title="Title">
+      <div class="logo-wordmark" style="margin-bottom: 6px;">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="4.5" width="17" height="13" rx="1.5"/><path d="M1.5 6 L10 12 L18.5 6"/></svg>
+        Envelope
+      </div>
+      <div class="grow" style="display:flex; flex-direction:column; justify-content:center;">
+        <span class="eyebrow">Private treasury &amp; payroll · Live on Solana mainnet</span>
+        <h1 class="title" style="font-size: 78px; margin-top: 22px;">
+          Pay your global team<br/>without putting their<br/>salaries on a block explorer.
+        </h1>
+        <p class="lede" style="margin-top: 26px; font-size: 21px; max-width: 58ch;">
+          Envelope is the treasury &amp; payroll OS for crypto-native companies — money in from any chain,
+          every contractor paid in <b style="color:var(--ink)">one shielded batch</b>, and nothing on the public ledger that shouldn&rsquo;t be there.
+        </p>
+      </div>
+      <div class="spread mt-auto" style="align-items:flex-end;">
+        <div class="mono" style="font-size: 13px; color: var(--ink-2);">envelope.sol &nbsp;·&nbsp; Solana Frontier 2026</div>
+        <div class="pill accent">Try it now — pay someone at <b style="margin-left:4px;">envelope.sol</b></div>
+      </div>
+      <aside class="notes" hidden>
+        <p>Open with the bar test. "It's how a founder pays 30 contractors in 12 countries without every salary landing on Solscan." Don't read the slide — say the line, then say "and it's live — you can pay someone right now."</p>
+        <p class="objection"><b>If asked "is this just a hackathon thing?"</b> — It's deployed on Solana mainnet today: envelope.sol is registered, the on-chain policy program is live, and the full payroll loop runs end to end. We built it to be used, not demoed.</p>
+      </aside>
+    </section>
+
+    <!-- 2 · WHY NOW -->
+    <section class="slide" data-title="Why now">
+      <span class="eyebrow">Why now</span>
+      <h2 class="head" style="margin-top: 18px;">Payroll is moving on-chain<br/><span class="muted">in 2026. Privacy didn&rsquo;t come with it.</span></h2>
+      <div class="grid-3" style="margin-top: 36px;">
+        <div class="card">
+          <div class="k">The demand</div>
+          <div class="v">$9T+</div>
+          <div class="d">in stablecoin settlement volume over the trailing year. Deel shipped stablecoin payroll in Feb 2026; Rise already runs payroll for 700+ companies in 190+ countries.</div>
+        </div>
+        <div class="card">
+          <div class="k">The rail</div>
+          <div class="v">$650B / mo</div>
+          <div class="d">in stablecoin transactions on Solana — more than any chain. USDC supply on Solana crossed $10.5B; Solana takes ~33% of weekly adjusted stablecoin volume.</div>
+        </div>
+        <div class="card" style="background: var(--accent-soft); border-color: rgba(42,61,95,0.2);">
+          <div class="k" style="color: var(--accent-ink);">The gap</div>
+          <div class="v" style="color: var(--accent-ink);">0</div>
+          <div class="d" style="color: var(--accent-ink);">crypto-payroll products that keep salaries private. Deel, Rise, Request — every one settles in plaintext on a public ledger. On-chain privacy primitives only became usable on Solana this cycle.</div>
+        </div>
+      </div>
+      <p class="lede" style="margin-top: 34px; max-width: 70ch;">
+        The window: payroll is going on-chain <i>right now</i> — and on-chain payroll without privacy is a non-starter for any company with a cap table worth keeping.
+      </p>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>02 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>This is the slide that separates "an idea" from "an opportunity". The catalyst isn't "crypto is growing" — it's two specific things colliding: (1) the big payroll players moved to stablecoins in early 2026, and (2) Solana became the actual settlement layer for stablecoins. We're not betting payroll goes on-chain; it already is. We're betting it can't stay public.</p>
+        <p class="objection"><b>"Won't the incumbents just add privacy?"</b> — Deel's stablecoin support is a third-party MoonPay dependency; Rise and Request settle on transparent chains. Privacy here means MPC custody + FHE policy + shielded settlement composed natively — it's an architecture, not a feature toggle. We're a year ahead on the part that's hard.</p>
+      </aside>
+    </section>
+
+    <!-- 3 · PROBLEM -->
+    <section class="slide" data-title="Problem">
+      <span class="eyebrow">The problem</span>
+      <div class="spread" style="margin-top: 20px; align-items: stretch;">
+        <div class="col" style="flex: 1.1;">
+          <h2 class="head">Your comp data is your strategy.<br/><span class="muted">On-chain payroll today broadcasts it.</span></h2>
+          <p class="lede" style="margin-top: 22px;">
+            Pay a contractor on-chain the normal way and you publish — permanently, to anyone with a block explorer:
+          </p>
+          <ul class="checks" style="margin-top: 20px;">
+            <li><span class="mk bad">×</span><span><b>Who you employ</b> — the full roster, wallet by wallet.</span></li>
+            <li><span class="mk bad">×</span><span><b>What they earn</b> — exact figures, raises, your salary bands.</span></li>
+            <li><span class="mk bad">×</span><span><b>Your burn</b> — total monthly outflow, runway, hiring pace.</span></li>
+            <li><span class="mk bad">×</span><span><b>Read by</b> — competitors, recruiters, counterparties, journalists.</span></li>
+          </ul>
+        </div>
+        <div class="col" style="flex: 0.9; justify-content: center;">
+          <div class="card" style="background: var(--paper-3);">
+            <div class="k">And the alternative is worse</div>
+            <p style="margin-top: 14px; font-size: 15px; line-height: 1.6; color: var(--ink-2);">
+              Mercury + Wise (five-seat cap, won&rsquo;t touch USDC) + three banks + five spreadsheets + a finance person who keeps apologising.
+              Or Deel — full plaintext, 8&ndash;15% on the FX leg, and still no privacy.
+            </p>
+            <p style="margin-top: 16px; font-family: var(--display); font-size: 22px; line-height: 1.3; letter-spacing: -0.01em;">
+              Founders are choosing between <span class="strike">leaking strategy</span> and <span class="strike">begging banks</span>.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>03 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>Make it visceral and specific to the persona: an AI/SaaS founder paying 30 contractors across 12 countries. Their cap table, comp bands, and burn are competitive information — and on Solscan it's a public confession. The status quo (banks + spreadsheets) is the reason they went crypto in the first place; don't let them think the choice is "crypto vs. legacy" — it's "leaky crypto vs. painful legacy", and we're a third door.</p>
+        <p class="objection"><b>"Do people actually care? Most addresses are pseudonymous."</b> — Once you've paid a contractor in fiat or filed a 1099, the link is trivially de-anonymised; recruiters already scrape this. And for the company side, the burn rate and roster size leak regardless of how anonymous the recipient is. The people who care are exactly the ones who can pay for it.</p>
+      </aside>
+    </section>
+
+    <!-- 4 · SOLUTION -->
+    <section class="slide" data-title="Solution">
+      <span class="eyebrow">The solution</span>
+      <h2 class="head" style="margin-top: 18px;">Envelope — money in, salaries out,<br/><span class="muted">policy in between. Nothing leaked.</span></h2>
+      <div class="grid-3" style="margin-top: 34px;">
+        <div class="card">
+          <div class="pill" style="margin-bottom: 14px;">01 · Money in</div>
+          <p style="font-size: 15px; line-height: 1.55; color: var(--ink);">Customers pay from <b>any chain</b> — Base, Arbitrum, BNB, Solana — or a <b>card</b>, UPI, SEPA. It all settles as USDC in one treasury you control.</p>
+        </div>
+        <div class="card">
+          <div class="pill" style="margin-bottom: 14px;">02 · Policy</div>
+          <p style="font-size: 15px; line-height: 1.55; color: var(--ink);">Salary bands &amp; caps live <b>encrypted before they touch a database</b>. An on-chain program enforces the monthly cap and requires co-signers — nobody reads a salary to approve a run.</p>
+        </div>
+        <div class="card">
+          <div class="pill" style="margin-bottom: 14px;">03 · Salaries out</div>
+          <p style="font-size: 15px; line-height: 1.55; color: var(--ink);">One approval pays <b>every contractor in a single shielded batch</b>. The public ledger sees one entry — no names, no amounts. Each recipient gets a one-time stealth claim link, greeted by their <span class="mono">.sol</span> handle.</p>
+        </div>
+      </div>
+      <div class="card mt-auto" style="margin-top: 30px; background: var(--accent-soft); border-color: rgba(42,61,95,0.2);">
+        <p style="font-size: 17px; line-height: 1.5; color: var(--accent-ink);">
+          <b>The part Stripe and Wise can&rsquo;t ship:</b> a treasury with no single private key, salary figures that never sit in plaintext, and payroll that settles on a public chain without disclosing a thing.
+        </p>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>04 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>One idea: Envelope is one product that does the whole loop, and the loop is private by construction — not "we added a privacy mode". Walk left to right: in, policy, out. The encrypted-policy bit is the surprising one — emphasise that an approver never has to see a number to approve the run.</p>
+        <p class="objection"><b>"Why not just use a privacy mixer for the payouts?"</b> — Mixers protect one transaction; they don't give you a programmable treasury, encrypted comp policy, on-chain spending caps, or recipient claim links. Envelope is the whole workflow a finance team needs, with privacy as the substrate — not a bolt-on you remember to use.</p>
+      </aside>
+    </section>
+
+    <!-- 5 · HOW IT WORKS -->
+    <section class="slide" data-title="How it works">
+      <span class="eyebrow">How it works · the loop</span>
+      <h2 class="head" style="margin-top: 18px;">Three steps. One shielded batch.</h2>
+      <div class="steps" style="margin-top: 38px;">
+        <div class="step">
+          <div class="n">I</div>
+          <h3>Connect your treasury</h3>
+          <p>Bring your wallet and your contractor roster. Pay-ins land from any chain or a card and settle into one treasury — secured by multi-party custody, no single key.</p>
+          <div class="tags"><span class="tag">cross-chain in</span><span class="tag">MPC custody</span><span class="tag">fiat rail</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="n">II</div>
+          <h3>Set the policy</h3>
+          <p>Salary bands, a monthly cap, co-signers. Compensation is encrypted before it hits a database; an on-chain program enforces the cap and gates every release.</p>
+          <div class="tags"><span class="tag">encrypted policy</span><span class="tag">on-chain caps</span><span class="tag">co-sign</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="n">III</div>
+          <h3>Run payroll</h3>
+          <p>Approve once. Every contractor is paid in a single shielded batch. The public ledger shows one entry; each recipient gets a one-time claim link tied to their <span class="mono">.sol</span> handle.</p>
+          <div class="tags"><span class="tag">shielded batch</span><span class="tag">stealth links</span><span class="tag">.sol identity</span></div>
+        </div>
+      </div>
+      <div class="card mt-auto" style="margin-top: 32px;">
+        <div class="spread" style="align-items: center;">
+          <div style="font-family: var(--mono); font-size: 13px; color: var(--ink-2);">
+            roster.csv &nbsp;→&nbsp; <span style="color:var(--ink)">[ encrypted policy check ]</span> &nbsp;→&nbsp; <span style="color:var(--ink)">[ on-chain approval + co-sign ]</span> &nbsp;→&nbsp; <span style="color:var(--ink)">[ shielded batch ]</span> &nbsp;→&nbsp; 30 claim links
+          </div>
+          <div class="pill pos">public ledger sees: 1 entry</div>
+        </div>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>05 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>This is where a 20-second screen recording goes: open the dashboard → select the roster → "dry run" → "send shielded payroll" → show the single on-chain entry + the claim links. Say "30 payments, one ledger entry, ~47 seconds" while it runs.</p>
+        <p class="objection"><b>"How does a contractor actually get paid?"</b> — They open a one-time link, see "Hi, alice.sol", and claim. No wallet onboarding ceremony, no exposed amount on-chain, link expires on first use. The agent that signed the run is itself identified by a .sol subdomain — payroll-agent.envelope.sol — so there's an auditable signer without a doxxed roster.</p>
+      </aside>
+    </section>
+
+    <!-- 6 · WHY SOLANA / WHY CRYPTO -->
+    <section class="slide" data-title="Why Solana">
+      <span class="eyebrow">Why this needs the chain · why Solana</span>
+      <div class="spread" style="margin-top: 18px; align-items: stretch;">
+        <div class="col" style="flex: 1;">
+          <h2 class="head">Six building blocks.<br/><span class="muted">One product. Rip out the chain and it&rsquo;s spreadsheets again.</span></h2>
+          <p class="lede" style="margin-top: 18px; max-width: 44ch;">
+            This isn&rsquo;t blockchain for its own sake. Each layer does real work in the loop — and they only compose because they settle on one chain.
+          </p>
+          <div class="card" style="margin-top: 18px; background: var(--accent-soft); border-color: rgba(42,61,95,0.2);">
+            <p style="font-size: 14.5px; line-height: 1.5; color: var(--accent-ink);">
+              Solana specifically: the one chain where stablecoin payroll volume is already real <i>and</i> the privacy primitives shipped this cycle <i>and</i> a 30-person batch costs cents in fees.
+            </p>
+          </div>
+        </div>
+        <div class="col" style="flex: 1.1; justify-content: center;">
+          <div class="card" style="padding: 6px 22px;">
+            <div class="prow"><span class="badge"></span><span class="nm">KIRAPAY</span><span class="ds">Cross-chain pay-ins — any token, any chain, settled to USDC.</span></div>
+            <div class="prow"><span class="badge"></span><span class="nm">Dodo Payments</span><span class="ds">Fiat pay-ins — card, UPI, SEPA — captured and settled to USDC.</span></div>
+            <div class="prow"><span class="badge"></span><span class="nm">Ika</span><span class="ds">MPC dWallet — the treasury has no single private key; caps &amp; co-sign.</span></div>
+            <div class="prow"><span class="badge"></span><span class="nm">Encrypt (FHE)</span><span class="ds">&ldquo;Within band?&rdquo; checked on encrypted salaries — a real <span class="mono">#[encrypt_fn]</span>.</span></div>
+            <div class="prow"><span class="badge"></span><span class="nm">Cloak</span><span class="ds">Shielded payroll batches — 30 payouts, one ledger entry, stealth claims.</span></div>
+            <div class="prow"><span class="badge"></span><span class="nm">SNS</span><span class="ds"><span class="mono">.sol</span> identity for contractors &amp; the signing agent; verified Records&nbsp;V2.</span></div>
+            <div class="prow"><span class="badge" style="background:var(--ink-3)"></span><span class="nm" style="font-family:var(--mono);font-size:12.5px;font-weight:500">envelope-policy</span><span class="ds">Open-source Anchor program — the rules every release passes through.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>06 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>This is the "why crypto" / blockchain-necessity slide. Hit the test head-on: rip out the chain → you lose composability (these five don't exist as one stack off-chain), permissionless access (no bank account, no five-seat cap), and trustless settlement (an agent paying 30 people without an intermediary). For a Solana grant audience: emphasise this is a working composition of five ecosystem primitives — a reference implementation, not a slideware integration.</p>
+        <p class="objection"><b>"Could you do this on Ethereum / an L2?"</b> — Not today: the stablecoin payroll volume is on Solana, the FHE + shielded-transfer + MPC primitives we use are Solana-native, and L2 fees would make a 30-person batch uneconomical. Solana is the only place all three are true at once.</p>
+      </aside>
+    </section>
+
+    <!-- 7 · TRACTION / LIVE -->
+    <section class="slide" data-title="Live on mainnet">
+      <span class="eyebrow">What&rsquo;s live</span>
+      <h2 class="head" style="margin-top: 18px;">Not a concept. It runs on Solana mainnet.</h2>
+      <div class="grid-4" style="margin-top: 36px;">
+        <div class="card"><div class="k">End-to-end run</div><div class="v">~47s</div><div class="d">30 contractors → one shielded batch, dry-run to settled.</div></div>
+        <div class="card"><div class="k">Cost</div><div class="v">~$0.04</div><div class="d">per contractor in network fees — a full batch costs cents.</div></div>
+        <div class="card" style="background: var(--accent-soft); border-color: rgba(42,61,95,0.2);"><div class="k" style="color:var(--accent-ink)">Salary bytes on the public ledger</div><div class="v" style="color:var(--accent-ink)">0</div><div class="d" style="color:var(--accent-ink)">no names, no amounts, no roster — by construction.</div></div>
+        <div class="card"><div class="k">On Solana</div><div class="v">mainnet</div><div class="d"><span class="mono">envelope.sol</span> registered; <span class="mono">envelope-policy</span> program deployed.</div></div>
+      </div>
+      <div class="grid-2" style="margin-top: 16px;">
+        <div class="card">
+          <div class="k">Already shipped</div>
+          <ul class="checks" style="margin-top: 14px;">
+            <li><span class="mk">✓</span><span>Full payroll loop — pay-in, encrypted policy, on-chain approval, shielded batch, claim links.</span></li>
+            <li><span class="mk">✓</span><span>One real FHE compute (<span class="mono">#[encrypt_fn]</span>) on the compensation policy.</span></li>
+            <li><span class="mk">✓</span><span><span class="mono">.sol</span> identity end-to-end: contractors, claim pages, and the signing agent (<span class="mono">payroll-agent.envelope.sol</span>).</span></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="k">Next 90 days</div>
+          <ul class="checks" style="margin-top: 14px;">
+            <li><span class="mk">→</span><span>Ika dWallet binding to production custody.</span></li>
+            <li><span class="mk">→</span><span>Harden the FHE policy; audit <span class="mono">envelope-policy</span>.</span></li>
+            <li><span class="mk">→</span><span>Onboard the first 25 crypto-native teams as design partners.</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>07 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>Be honest about the stage: this is a working product on mainnet, not a company with revenue yet. Lead with the demo metrics (47s, $0.04, 0 leaked) because they're concrete and measured on real runs. Then the "shipped vs. next" split shows momentum and self-awareness. Don't oversell — "first 25 design partners" is the next milestone, not a claim.</p>
+        <p class="objection"><b>"This is your only proof?"</b> — Yes, and we'd rather show a working mainnet product than a deck of intentions. The 47s / $0.04 / zero-leak figures are from real runs; the open-source policy program is on-chain and verifiable; the .sol records resolve right now. The ask funds turning that into users.</p>
+      </aside>
+    </section>
+
+    <!-- 8 · MARKET -->
+    <section class="slide" data-title="Market">
+      <span class="eyebrow">Market</span>
+      <h2 class="head" style="margin-top: 16px;">Cross-border contractor pay is a<br/><span class="muted">$10B market, doubling — and going on-chain.</span></h2>
+      <div class="tam-wrap" style="margin-top: 30px;">
+        <div class="rings">
+          <div class="ring tam"><span class="lbl">TAM</span></div>
+          <div class="ring sam"><span class="lbl">SAM</span></div>
+          <div class="ring som"><span class="lbl">SOM</span></div>
+        </div>
+        <div class="tam-list">
+          <div class="row">
+            <div class="tag">TAM</div>
+            <div class="t">$9.8B → $24.7B by 2034</div>
+            <div class="s">Global cross-border contractor payments (10.8% CAGR), inside a $1.5T freelance economy — and $9T+/yr in stablecoin settlement volume those payouts can ride.</div>
+          </div>
+          <div class="row">
+            <div class="tag">SAM</div>
+            <div class="t">Crypto-native &amp; crypto-curious global teams</div>
+            <div class="s">The segment Rise (700+ companies), Deel&rsquo;s stablecoin tier, and Request Finance already serve — tens of thousands of companies, expanding as 67% of CFOs put cross-border contractor automation in their top-5 tech priorities.</div>
+          </div>
+          <div class="row">
+            <div class="tag">SOM</div>
+            <div class="t">Crypto-native AI / SaaS startups — land here</div>
+            <div class="s">They already hold USDC, already pay globally, and have a cap table worth hiding. The persona we built for: a founder paying 30 contractors across 12 countries.</div>
+          </div>
+        </div>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>08 / 12 &nbsp;·&nbsp; <span class="src">sources: dataintelo, riseworks, a16z stablecoin index, solana.com — 2025–26</span></span></div>
+      <aside class="notes" hidden>
+        <p>Don't claim the whole $1.5T — that's the freelance economy, the backdrop. The honest TAM is the $9.8B→$24.7B cross-border contractor payments market. SAM is "companies that would pay in stablecoins" — provable because Rise/Deel/Request already serve it. SOM is the wedge: crypto-native startups we land first, then expand outward to crypto-curious mid-market.</p>
+        <p class="objection"><b>"That's a small TAM for a venture-scale company."</b> — The $10B is just the payments fee pool; the real prize is becoming the system of record for crypto-native finance — treasury, payroll, invoicing, compliance — the way Deel expanded from contractor payments into a $12B company. Payroll is the wedge, not the ceiling.</p>
+      </aside>
+    </section>
+
+    <!-- 9 · COMPETITION -->
+    <section class="slide" data-title="Competition">
+      <span class="eyebrow">Competition</span>
+      <h2 class="head" style="margin-top: 16px;">Everyone pays your contractors.<br/><span class="muted">No one keeps it private.</span></h2>
+      <table class="cmp" style="margin-top: 28px;">
+        <thead>
+          <tr>
+            <th style="width: 22%">Player</th>
+            <th>Crypto-native</th>
+            <th>Programmable treasury</th>
+            <th>Encrypted comp policy</th>
+            <th>Private settlement</th>
+            <th>Pay-in: any chain + fiat</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="feat">Deel / Papaya</td><td class="no">no — added stablecoin via 3rd party, 2026</td><td class="no">no</td><td class="no">no</td><td class="no">no — plaintext</td><td class="no">fiat only</td></tr>
+          <tr><td class="feat">Rise / Bitwage</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td><td class="no">no — plaintext, multi-chain</td><td class="no">partial</td></tr>
+          <tr><td class="feat">Request Finance</td><td class="yes">yes</td><td class="no">multisig only</td><td class="no">no</td><td class="no">no — plaintext (EVM)</td><td class="no">EVM chains</td></tr>
+          <tr><td class="feat">Banks + spreadsheets</td><td class="no">no</td><td class="no">no</td><td class="no">n/a</td><td class="yes">private — but a nightmare</td><td class="no">no USDC</td></tr>
+          <tr class="us"><td>Envelope</td><td class="yes">yes — Solana</td><td class="yes">MPC dWallet + on-chain caps</td><td class="yes">FHE policy</td><td class="yes">shielded batch</td><td class="yes">any chain + card / UPI / SEPA</td></tr>
+        </tbody>
+      </table>
+      <p class="lede" style="margin-top: 26px; max-width: 72ch;">
+        The biggest competitor is the status quo — and the status quo is a public confession or a pile of spreadsheets. We&rsquo;re the only column with a check in <i>privacy</i>.
+      </p>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>09 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>Never say "no competition" — list them and respect them. Deel is a $12B incumbent; Rise has real traction; Request owns DAO payments. Our wedge is the one column they all miss: privacy, delivered as an architecture (MPC + FHE + shielded), native to Solana. If a judge uses Deel or Request, acknowledge it's great — for companies that don't mind their comp data being public.</p>
+        <p class="objection"><b>"Deel could acquire a privacy startup tomorrow."</b> — They could, and that'd validate the thesis. But bolting shielded settlement onto a plaintext, EVM-and-fiat stack is a re-platform, not an integration — and meanwhile the crypto-native teams who need this most aren't waiting for Deel's roadmap.</p>
+      </aside>
+    </section>
+
+    <!-- 10 · BUSINESS MODEL -->
+    <section class="slide" data-title="Business model">
+      <span class="eyebrow">Business model</span>
+      <h2 class="head" style="margin-top: 18px;">Free to start. Per shielded batch as you grow.<br/><span class="muted">No seat tax. No spreadsheet upcharge.</span></h2>
+      <div class="grid-3" style="margin-top: 36px;">
+        <div class="card">
+          <div class="pill" style="margin-bottom:14px;">Starter</div>
+          <div style="font-family:var(--display); font-size:42px; line-height:1; letter-spacing:-0.02em;">$0</div>
+          <p style="margin-top:14px; font-size:14px; line-height:1.55; color:var(--ink-2);">Up to 5 contractors · 1 shielded batch / month · crypto &amp; card pay-ins. Land developers and tiny teams.</p>
+        </div>
+        <div class="card" style="border:2px solid var(--accent);">
+          <div class="pill accent" style="margin-bottom:14px;">Operator · core revenue</div>
+          <div style="font-family:var(--display); font-size:42px; line-height:1; letter-spacing:-0.02em;">$39<span style="font-size:16px; color:var(--ink-3);">/mo</span> + per-batch fee</div>
+          <p style="margin-top:14px; font-size:14px; line-height:1.55; color:var(--ink-2);">Unlimited shielded batches, all pay-in rails, encrypted policy &amp; caps, scoped review keys, API. A small % on each settled batch — revenue scales with payroll volume, not headcount.</p>
+        </div>
+        <div class="card">
+          <div class="pill" style="margin-bottom:14px;">Enterprise</div>
+          <div style="font-family:var(--display); font-size:42px; line-height:1; letter-spacing:-0.02em;">Custom</div>
+          <p style="margin-top:14px; font-size:14px; line-height:1.55; color:var(--ink-2);">Dedicated custody node, custom on-chain policy, SLA, whitelabeled review portal. The expansion path into mid-market treasury.</p>
+        </div>
+      </div>
+      <p class="lede" style="margin-top: 30px; max-width: 72ch;">
+        Wedge revenue: a per-batch settlement fee on private payroll. Expansion: become the system of record — treasury, invoicing, compliance — for crypto-native finance.
+      </p>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>10 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>Keep this short — for a grant/grand-prize audience it's about showing there's a sane path to sustainability, not a 5-year P&L. The key line: revenue scales with payroll volume (per-batch fee), not seats — which is the opposite of Deel's seat-tax model and the thing crypto-native teams hate. Mark exact pricing as illustrative; the model (free → per-batch → enterprise) is the point.</p>
+        <p class="objection"><b>"Why would anyone pay when the building blocks are free protocols?"</b> — Same reason they pay Vercel instead of running their own infra: the integration, the encrypted policy layer, the compliance surface, and the it-just-works payroll loop are the product. Composing KIRAPAY + Ika + Encrypt + Cloak + SNS correctly, safely, and with an audit trail is not a weekend project for a finance team.</p>
+      </aside>
+    </section>
+
+    <!-- 11 · ECOSYSTEM IMPACT -->
+    <section class="slide" data-title="Ecosystem impact">
+      <span class="eyebrow">Why this matters for Solana</span>
+      <h2 class="head" style="margin-top: 18px;">A reference implementation for<br/><span class="muted">private payments — and real payroll volume on-chain.</span></h2>
+      <div class="grid-2" style="margin-top: 32px;">
+        <div class="card">
+          <div class="k">Open infrastructure</div>
+          <ul class="checks" style="margin-top: 14px;">
+            <li><span class="mk">✓</span><span><span class="mono">envelope-policy</span> is open-source — any Solana treasury app can drop in on-chain spending caps + co-sign.</span></li>
+            <li><span class="mk">✓</span><span>First production product to compose <b>KIRAPAY · Dodo · Ika · Encrypt · Cloak · SNS</b> in one loop — a worked example of privacy-preserving payments on Solana.</span></li>
+            <li><span class="mk">✓</span><span>Agent identity via SNS subdomains (<span class="mono">payroll-agent.envelope.sol</span>) — a reusable pattern for autonomous agents that pay people.</span></li>
+          </ul>
+        </div>
+        <div class="card" style="background: var(--accent-soft); border-color: rgba(42,61,95,0.2);">
+          <div class="k" style="color:var(--accent-ink)">Volume &amp; adoption</div>
+          <ul class="checks" style="margin-top: 14px;">
+            <li><span class="mk" style="color:var(--accent)">→</span><span style="color:var(--accent-ink)">Routes real-world payroll onto Solana&rsquo;s stablecoin rails — recurring, sticky USDC flow, not speculative volume.</span></li>
+            <li><span class="mk" style="color:var(--accent)">→</span><span style="color:var(--accent-ink)">Gives crypto-native companies a reason to keep their treasury on Solana, not bridge it out.</span></li>
+            <li><span class="mk" style="color:var(--accent)">→</span><span style="color:var(--accent-ink)">Exercises Encrypt&rsquo;s FHE and Cloak&rsquo;s shielded transfers at production scale — useful pressure on new primitives.</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="lede" style="margin-top: 30px; max-width: 74ch;">
+        Solana proved it&rsquo;s the settlement layer for stablecoins. Envelope is the layer that lets companies actually <i>use</i> it for payroll — privately, programmably, and with an audit trail.
+      </p>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>11 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>This is the slide tuned for a grant committee / "win the whole thing" framing: it's not just a good app, it's infrastructure other Solana builders can use, a stress test for new privacy primitives, and a magnet for real-world payroll volume. Tie it back to the Feb 2026 stat: Solana already settles $650B/mo in stablecoins — Envelope makes a chunk of that recurring payroll instead of trading flow.</p>
+        <p class="objection"><b>"Is this just a hackathon integration of sponsor SDKs?"</b> — The opposite: each protocol does load-bearing work in a single loop a real finance team would use, the policy program is open-sourced for anyone, and it's deployed on mainnet. It's the kind of thing the ecosystem points to and says "this is how you compose these."</p>
+      </aside>
+    </section>
+
+    <!-- 12 · THE ASK -->
+    <section class="slide" data-title="The ask">
+      <span class="eyebrow">The invitation</span>
+      <h2 class="head" style="margin-top: 18px;">We&rsquo;re not asking you to imagine it.<br/><span class="muted">It&rsquo;s live. Pay someone at <span class="mono" style="color:var(--accent-ink)">envelope.sol</span>.</span></h2>
+      <div class="grid-2" style="margin-top: 34px;">
+        <div class="card">
+          <div class="k">The ask</div>
+          <p style="margin-top:14px; font-size:16px; line-height:1.6; color:var(--ink);">
+            Grand prize &mdash; and a <b>Solana Foundation grant</b> to take Envelope from working product to a 25-team design-partner cohort:
+          </p>
+          <ul class="checks" style="margin-top:16px;">
+            <li><span class="mk">①</span><span><b>Production FHE policy + Ika dWallet binding</b> — months 1–3.</span></li>
+            <li><span class="mk">②</span><span><b>25 crypto-native teams</b> running real payroll on Envelope — months 2–6.</span></li>
+            <li><span class="mk">③</span><span><b>Open-source the full SDK + third-party audit</b> of <span class="mono">envelope-policy</span> — by month 6.</span></li>
+          </ul>
+          <p style="margin-top:14px; font-family:var(--mono); font-size:12px; color:var(--ink-3);">use of funds: 2 engineers, one security audit, design-partner onboarding · <span class="src">amount: TBD with committee</span></p>
+        </div>
+        <div class="card" style="display:flex; flex-direction:column; justify-content:center; background: var(--paper-3);">
+          <p class="quote">&ldquo;Stop apologising for your payroll spreadsheet.&rdquo;</p>
+          <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px; font-size:14px; color:var(--ink-2);">
+            <div><span class="mono" style="color:var(--ink)">envelope.sol</span> &nbsp;·&nbsp; live on Solana mainnet</div>
+            <div><span class="mono" style="color:var(--ink)">github.com/arko05roy/Envelope</span> &nbsp;·&nbsp; <span class="mono">envelope-policy</span> open source</div>
+            <div>Solana Frontier 2026 &nbsp;·&nbsp; built across KIRAPAY · Dodo · Ika · Encrypt · Cloak · SNS</div>
+          </div>
+          <div class="pill accent" style="margin-top:24px; align-self:flex-start;">Open the dashboard → run a payroll batch → watch the ledger see nothing</div>
+        </div>
+      </div>
+      <div class="footline"><span class="logo-wordmark">Envelope</span><span>12 / 12</span></div>
+      <aside class="notes" hidden>
+        <p>Close with the invitation, not a slide read: "We're not pitching a roadmap — it's deployed; pay someone right now." Then the specific ask: grand prize + a grant scoped to a clear 6-month milestone (production privacy stack → 25 design partners → open SDK + audit). Be explicit that the dollar amount is to be set with the committee — don't invent one. End on the product line: "stop apologising for your payroll spreadsheet."</p>
+        <p class="objection"><b>"What do you need the money for if it already works?"</b> — Working ≠ production-hardened. The grant funds: (1) taking the FHE policy and Ika custody binding from demo-grade to audited production, (2) onboarding the first 25 teams (support, compliance surface, claim-side polish), and (3) open-sourcing the SDK so the ecosystem compounds on it. Two engineers, one audit, six months.</p>
+      </aside>
+    </section>
+
+  </div>
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="counter" id="counter">01 / 12</div>
+<div class="hint">← → navigate &nbsp;·&nbsp; N notes &nbsp;·&nbsp; F fit</div>
+<div class="notes-panel" id="notesPanel"><h4>Presenter notes</h4><div id="notesContent"></div></div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var n = slides.length;
+    var i = 0;
+    var notesOn = false;
+    var deck = document.getElementById('deck');
+    var progress = document.getElementById('progress');
+    var counter = document.getElementById('counter');
+    var notesPanel = document.getElementById('notesPanel');
+    var notesContent = document.getElementById('notesContent');
+
+    // build progress dots
+    for (var k = 0; k < n; k++) {
+      (function (idx) {
+        var d = document.createElement('div');
+        d.className = 'pd';
+        d.addEventListener('click', function () { go(idx); });
+        progress.appendChild(d);
+      })(k);
+    }
+    var dots = Array.prototype.slice.call(progress.children);
+
+    function pad(x) { return (x < 10 ? '0' : '') + x; }
+
+    function fit() {
+      var pad = 28;
+      var sw = (window.innerWidth - pad * 2) / 1280;
+      var sh = (window.innerHeight - pad * 2) / 720;
+      var s = Math.min(sw, sh, 1.2);
+      deck.style.transform = 'scale(' + s + ')';
+    }
+
+    function renderNotes() {
+      var aside = slides[i].querySelector('.notes');
+      notesContent.innerHTML = aside ? aside.innerHTML : '<p>—</p>';
+    }
+
+    function go(idx) {
+      i = Math.max(0, Math.min(n - 1, idx));
+      slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+      dots.forEach(function (d, j) { d.classList.toggle('on', j === i); });
+      counter.textContent = pad(i + 1) + ' / ' + pad(n);
+      if (notesOn) renderNotes();
+      try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+    }
+
+    function next() { go(i + 1); }
+    function prev() { go(i - 1); }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); next(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+      else if (e.key === 'Home') { go(0); }
+      else if (e.key === 'End') { go(n - 1); }
+      else if (e.key === 'n' || e.key === 'N') {
+        notesOn = !notesOn;
+        notesPanel.classList.toggle('show', notesOn);
+        if (notesOn) renderNotes();
+      }
+      else if (e.key === 'f' || e.key === 'F') { fit(); }
+      else if (/^[1-9]$/.test(e.key)) { go(parseInt(e.key, 10) - 1); }
+    });
+
+    // swipe (touch)
+    var tx = 0;
+    document.addEventListener('touchstart', function (e) { tx = e.changedTouches[0].clientX; }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      var dx = e.changedTouches[0].clientX - tx;
+      if (Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+    }, { passive: true });
+
+    window.addEventListener('resize', fit);
+
+    // deep link
+    var start = parseInt((location.hash || '').replace('#', ''), 10);
+    fit();
+    go(isNaN(start) ? 0 : start - 1);
+  })();
+</script>
+</body>
+</html>
