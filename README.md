@@ -2,7 +2,7 @@
 
 **The private treasury and payroll OS for crypto-native teams.**
 
-Run global payroll for 30+ contractors in under a minute, without doxxing a single salary. Hold reserves across Solana, Bitcoin, and Ethereum from one programmable treasury. Accept customer payments in any chain or any currency. Live today at [envelope.sol](https://envelope.sol).
+Run global payroll for 30+ contractors in under a minute, without doxxing a single salary. Hold reserves across Solana, Bitcoin, and Ethereum from one programmable treasury. Accept customer payments in any chain or any currency. Live today at [envelope.sol](https://envelope.sol) — [watch a full payroll run (3 min)](https://www.youtube.com/watch?v=0wbhnMgIJ9I).
 
 > "We were paying 28 contractors across 11 countries from a hot wallet. Every salary was on a public block explorer. Envelope shipped that problem to zero." — early operator using Envelope for monthly payroll
 
@@ -160,15 +160,15 @@ Each layer of the loop is built on the tool that does that one job best.
 
 **KIRAPAY** carries crypto-native pay-in. A customer on Base sending ETH, a customer on Arbitrum sending USDT, a customer on Solana sending SOL — KIRAPAY's intent router takes any of them and lands USDC inside the treasury. The customer-facing checkout page at `app/checkout/[id]/` is a single hosted link; no wallet bridging from the customer's side.
 
-**Dodo Payments** carries fiat pay-in. Card, UPI, SEPA, in 220+ countries — created as `checkoutSessions` for one-off invoices and as `subscriptions` for Envelope's own billing. Webhook signatures are verified per the Standard Webhooks spec at `app/api/dodo/webhook/`.
+**Dodo Payments** carries fiat — on both sides of the loop. On the way in: card, UPI, SEPA across 220+ countries, created as `checkoutSessions` for one-off customer invoices and as `subscriptions` for Envelope's own SaaS billing, with webhook signatures verified per the Standard Webhooks spec at `app/api/dodo/webhook/`. On the way out: a contractor can off-ramp their stealth claim straight to local fiat (INR / USD / EUR) through the same rail. So a SaaS or AI-native company can pay a global team without a single wire, a single bank relationship, or a single PSP to reconcile by hand — the cross-border payroll loop closes on stablecoins, money-in to money-out.
 
 **Ika** is the treasury. Not a wrapper around the treasury — *the treasury itself* is a dWallet. Signing authority is split between the founder and the Ika MPC network using 2PC-MPC, and policy is enforced by an on-chain Solana program: spend caps, role-based co-sign thresholds, multi-asset custody (USDC on Solana, BTC reserves, ETH ops) without bridging.
 
 **Encrypt** holds the compensation policy. Salary bands per role and per-recipient amounts are FHE-encrypted ciphertexts; the on-chain `envelope-policy` program runs one real `#[encrypt_fn]` that compares an encrypted disbursement amount to an encrypted band ceiling and emits a batch instruction without ever revealing the operands.
 
-**Cloak** does the actual private payout. One `transact` call shields the source UTXO and emits N output UTXOs to N stealth recipients in a single Solana transaction. Public ledger sees one batch transfer with no recipient amounts and no recipient identities. Viewing-key registration backs the audit story: a scoped key reveals one slice of the batch and nothing else.
+**Cloak** does the actual private payout, and it is the precondition for the product — not a feature bolted on. One `transact` call shields the source UTXO and emits N output UTXOs to N stealth recipients in a single Solana transaction; the public ledger sees one batch transfer with no recipient amounts and no recipient identities. Concretely the integration uses four SDK capabilities, each load-bearing: `transact` for the shielded batch disbursement, `generateUtxoKeypair` for per-recipient stealth addresses, the partial/full-withdraw path for the contractor claim flow at `app/claim/[id]/`, and scoped viewing keys so a finance reviewer or regulator sees exactly their slice of the batch and nothing else. Take Cloak out and every contractor's salary is permanently readable on any block explorer — there is no version of Envelope that ships without it.
 
-**Solana Name Service** carries identity in two places. Contractors are addressed by `<handle>.envelope.sol` subdomains, and the agent that signs the payroll run identifies itself as `payroll-agent.envelope.sol` — every batch is tagged onchain with the human-readable signer that produced it. SNS Records v2 (with staleness + Right of Association checks) imports a contractor's verified GitHub, Twitter, and Discord on the day they're added.
+**Solana Name Service** carries identity in two places. Contractors are addressed by `<handle>.envelope.sol` subdomains, and the agent that signs the payroll run identifies itself as `payroll-agent.envelope.sol` — every batch is tagged onchain with the human-readable signer that produced it. SNS Records v2 (with staleness + Right of Association checks) imports a contractor's verified GitHub, Twitter, and Discord on the day they're added. The run itself is executed by that named agent against an encrypted policy and a co-signing dWallet — payroll as an autonomous-payments primitive, with a verifiable on-chain identity behind every batch it produces.
 
 These pieces don't sit beside each other. They compose into one loop where any one of them being missing kills the product.
 
@@ -225,7 +225,38 @@ After this, `alice.envelope.sol`, `payroll-agent.envelope.sol`, etc. resolve on 
 
 Production on Solana mainnet. Cloak shielded payouts, Dodo card and SaaS billing, and the Envelope dashboard run on mainnet today. KIRAPAY cross-chain pay-in, Ika dWallet treasury, Encrypt FHE policy, and SNS subdomain identity run on devnet during the upstream stabilization window and migrate to mainnet on a published cadence — see [docs/architecture.md](./docs/architecture.md) for the migration table.
 
+**Deployed program IDs**
+
+| Program | Cluster | Address |
+|---|---|---|
+| Cloak shielded transfer | `mainnet-beta` | `zh1eLd6rSphLejbFfJEneUwzHRfMKxgzrgkfwA6qRkW` &nbsp;·&nbsp; relay `https://api.cloak.ag` |
+| `envelope-policy` — the Anchor program with the `#[encrypt_fn]` threshold check | `devnet` | `7xVNMJycAC5sQo1MaJTn8gHrbHBtkmuTbpBjrkC1Jo1H` |
+| Ika dWallet | `devnet` | `87W54kGYFQ1rgWqMeu4XTPHWXWmXSQCcjm8vCTfiq1oY` |
+| SNS identity tree (`envelope.sol` + `<handle>.envelope.sol` + `payroll-agent.envelope.sol`) | `devnet` | registered via `pnpm sns:bootstrap`; mainnet `.sol` handles resolve automatically |
+
+Verify any of these on-chain: `solana program show <ADDRESS> --url <cluster>`. Encrypt's FHE compute is upstream pre-alpha — the on-chain program is shaped for FHE and ships one real `#[encrypt_fn]`; per Encrypt's own docs, pre-alpha computation is plaintext, which we'll note here until the executor goes confidential.
+
 Built on Solana. Available now.
+
+---
+
+## Solana Frontier 2026 — track integration
+
+Envelope is one product, and each sponsor's technology is a different structural axis of it. Pull any one out and the loop in [What Envelope does](#what-envelope-does) breaks — that is the integration-depth answer for every track below.
+
+- **Repo:** this repository (public). **Live:** [envelope.sol](https://envelope.sol). **Video (≤5 min):** [youtube.com/watch?v=0wbhnMgIJ9I](https://www.youtube.com/watch?v=0wbhnMgIJ9I). **Program IDs:** see [Deployment](#deployment).
+- Deeper per-track notes — necessity sentence, code references, the exact demo moment: [`docs/sponsor-integration-checklist.md`](./docs/sponsor-integration-checklist.md).
+
+| Track | Why it's load-bearing in Envelope | Code | The moment in the video |
+|---|---|---|---|
+| **KIRAPAY** — Build for Adoption / Cross-Chain Checkout | The crypto pay-in *is* KIRAPAY: an invoice paid from any chain in any token, intent-routed and settled to USDC in the treasury. No KIRAPAY → Envelope cannot accept money in. | `apps/web/lib/kirapay/`, `app/checkout/[id]/`, `app/api/kirapay/webhook/` | A customer on another chain pays an invoice; USDC lands in the dWallet on Solana. |
+| **Dodo Payments** — Stablecoins × Solana / Superteam India · *Cross-Border Payments for Businesses* + *Agentic & Autonomous Payments* | Dodo is fiat on both sides — card / UPI / SEPA pay-in for customers who don't hold crypto, contractor-side off-ramp to local fiat, and Envelope's own subscription billing. The "SaaS/AI-native company pays a global team without wires" loop *is* the product. | `apps/web/lib/dodo/`, `app/api/dodo/webhook/` | A card payment settles in; later, a contractor off-ramps their claim to local fiat. |
+| **Ika** — Bridgeless Capital Markets | The treasury *is* a dWallet — 2PC-MPC signing split between the founder and the Ika network, every outflow gated by an on-chain Solana policy program (spend caps, role-based co-sign), multi-asset custody without bridges. No Ika → a hot wallet, not institutional custody. | `apps/web/lib/ika/`, `programs/envelope-policy/` | The founder cannot fire payroll alone — the disbursement is co-signed via 2PC-MPC. |
+| **Encrypt** — Encrypted Capital Markets | The compensation policy *is* FHE ciphertext. One real `#[encrypt_fn]` checks "this disbursement is within band" / "this batch is below the solo threshold" over encrypted state and emits the batch instruction without revealing the operands. No Encrypt → salary bands and approval rules are public. | `programs/envelope-policy/src/lib.rs`, `apps/web/lib/encrypt/` | Payroll is authorized by a threshold check whose inputs the founder never sees. |
+| **Cloak** — Private Execution | The payout *is* a shielded batch — one `transact` fans N stealth UTXOs out of one Solana transaction; scoped viewing keys give selective audit. Privacy is the precondition, not a feature: remove Cloak and every salary is on a public block explorer forever. | `apps/web/lib/cloak/`, `app/api/payroll/run/`, `app/claim/[id]/` | 30 payouts settle as one ledger entry; an auditor opens a scoped viewing key. |
+| **SNS** — Identity (Frontier × Network School) | Contractors onboard by `<handle>.envelope.sol`; the orchestrator agent is `payroll-agent.envelope.sol`, tagging every run with a verifiable on-chain signer; Records v2 (with staleness + RoA checks) imports verified GitHub / Twitter / Discord. | `apps/web/lib/sns/`, `app/api/sns/*`, `scripts/sns-bootstrap.ts` | Onboard `alice.sol` in one field; the claim page greets "Hi, alice.sol · paid by payroll-agent.envelope.sol". |
+
+> Encrypt's on-chain computation is upstream pre-alpha and currently runs in plaintext per Encrypt's own docs; the `envelope-policy` program is written *for* FHE — one real `#[encrypt_fn]` — and migrates with the network. We say so here rather than overstate it.
 
 ## License
 

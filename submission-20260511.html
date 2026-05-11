@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Envelope — Hackathon Submission Copy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F7F4EE;--paper-2:#FBF9F4;--paper-3:#F2EDE3;
+    --ink:#1A1A1A;--ink-2:#5C5648;--ink-3:#9A9486;--ink-4:#BDB6A6;
+    --rule:#E8E2D8;--rule-strong:#D6CFC1;--accent:#2A3D5F;--accent-ink:#1B2A45;--accent-soft:#EAE8F0;
+    --display:"Fraunces",Georgia,serif;--sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;padding:48px 24px 120px}
+  .wrap{max-width:860px;margin:0 auto}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(26,26,26,0.02) 1px,transparent 1px);background-size:3px 3px}
+  .brand{display:flex;align-items:center;gap:9px;color:var(--ink-2);font-size:14px;margin-bottom:8px}
+  .brand svg{width:18px;height:18px}
+  h1{font-family:var(--display);font-weight:500;font-size:40px;letter-spacing:-0.025em;line-height:1.05;margin-top:6px}
+  .sub{color:var(--ink-2);font-size:16px;margin-top:10px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--ink-3);display:inline-flex;align-items:center;gap:12px;margin:38px 0 14px}
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--ink-3)}
+  .block{background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;padding:22px 26px;position:relative}
+  .block + .block{margin-top:14px}
+  .block .lbl{position:absolute;top:-10px;left:18px;background:var(--paper);padding:0 8px;font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3)}
+  .block p{margin-top:6px}.block p:first-of-type{margin-top:0}
+  .block p + p{margin-top:14px}
+  .mono{font-family:var(--mono);font-size:13.5px}
+  a{color:var(--accent-ink)}
+  .tag{display:inline-block;font-family:var(--display);font-weight:500;font-size:22px;letter-spacing:-0.02em;line-height:1.3}
+  ul{margin-top:10px;padding-left:0;list-style:none}
+  ul li{display:flex;gap:12px;margin-top:9px;font-size:15px}
+  ul li .m{color:var(--accent);font-family:var(--mono);font-size:13px;flex-shrink:0;padding-top:2px}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3)}
+  td:first-child{font-weight:600;width:118px;white-space:nowrap}
+  .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .pill{font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--rule);background:var(--paper-3);color:var(--ink-2)}
+  .pill b{color:var(--ink)}
+  .note{font-size:13px;color:var(--ink-3);margin-top:10px}
+  .copyhint{font-family:var(--mono);font-size:11px;color:var(--ink-4);margin-top:30px;text-align:center}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink-3);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="4.5" width="17" height="13" rx="1.5"/><path d="M1.5 6 L10 12 L18.5 6"/></svg>
+    Envelope — submission copy
+  </div>
+  <h1>Pay your global team without putting<br/>their salaries on a block explorer.</h1>
+  <p class="sub">Private, programmable treasury &amp; payroll for crypto-native companies — Solana Frontier 2026.</p>
+
+  <div class="links">
+    <span class="pill">▶ Video: <b><a href="https://www.youtube.com/watch?v=0wbhnMgIJ9I">youtube.com/watch?v=0wbhnMgIJ9I</a></b></span>
+    <span class="pill">◎ Live: <b><a href="https://envelope.sol">envelope.sol</a></b></span>
+    <span class="pill">⌥ Code: <b><a href="https://github.com/arko05roy/Envelope">github.com/arko05roy/Envelope</a></b></span>
+  </div>
+
+  <!-- TAGLINE -->
+  <div class="eyebrow">Tagline</div>
+  <div class="block">
+    <span class="lbl">one line</span>
+    <p class="tag">Private treasury &amp; payroll for crypto-native global teams — money in from any chain, salaries out in one shielded batch, nothing on the public ledger that shouldn&rsquo;t be there.</p>
+  </div>
+
+  <!-- DESCRIPTION -->
+  <div class="eyebrow">Project description</div>
+  <div class="block">
+    <span class="lbl">paste into the form</span>
+    <p>Envelope is the treasury and payroll OS for companies that pay a distributed team in stablecoins. Customers pay invoices from any chain &mdash; or by card, UPI, or SEPA &mdash; and it all settles as USDC into one treasury with no single private key. Compensation lives encrypted before it touches a database; an on-chain program enforces the monthly cap and requires co-signers, so nobody reads a salary to approve a run. One approval pays every contractor in a single shielded batch: the public ledger shows one entry &mdash; no names, no amounts, no roster &mdash; and each recipient gets a one-time stealth claim link, greeted by their <span class="mono">.sol</span> handle.</p>
+    <p>The thing nobody else does: payroll on a public chain that doesn&rsquo;t doxx your team. Deel, Rise, and Request all settle in plaintext &mdash; every salary, every raise, your whole burn rate, readable forever by competitors and recruiters. Envelope makes private the <i>default</i>, not a mode you remember to switch on. It runs on Solana, where the stablecoin volume already is and the privacy primitives shipped this cycle, and a 30-person batch costs cents in fees.</p>
+    <p>Built for the AI/SaaS founder paying ~30 contractors across 12 countries who can&rsquo;t move payroll on-chain today without leaking strategy. The full loop runs against the chain &mdash; <span class="mono">envelope.sol</span> is registered, the <span class="mono">envelope-policy</span> program is deployed, and a real FHE compute gates every compensation policy.</p>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="eyebrow">How it works · the loop</div>
+  <div class="block">
+    <span class="lbl">three steps</span>
+    <ul>
+      <li><span class="m">I</span><span><b>Connect your treasury.</b> Bring your wallet and your contractor roster. Pay-ins land from any chain or a card and settle into one treasury secured by multi-party custody &mdash; no single key.</span></li>
+      <li><span class="m">II</span><span><b>Set the policy.</b> Salary bands, a monthly cap, co-signers. Compensation is encrypted before it hits a database; an on-chain program enforces the cap and gates every release with a real FHE check.</span></li>
+      <li><span class="m">III</span><span><b>Run payroll.</b> Approve once &mdash; every contractor is paid in a single shielded batch. The public ledger shows one entry; each recipient gets a one-time claim link tied to their <span class="mono">.sol</span> handle, and the orchestrating agent itself signs as <span class="mono">payroll-agent.envelope.sol</span>.</span></li>
+    </ul>
+  </div>
+
+  <!-- TRACK FIT -->
+  <div class="eyebrow">Track fit · what each protocol does in the loop</div>
+  <div class="block">
+    <span class="lbl">submission metadata</span>
+    <table>
+      <tr><th>Protocol</th><th>Job in Envelope &mdash; load-bearing, not bolted on</th></tr>
+      <tr><td>KIRAPAY</td><td>The crypto pay-in rail. Customers pay an invoice from any chain in any token; it routes and settles to the treasury. Without it, Envelope can&rsquo;t accept money in. <span class="mono">lib/kirapay/*</span>, <span class="mono">app/checkout/[id]</span>.</td></tr>
+      <tr><td>Dodo Payments</td><td>The fiat pay-in rail &mdash; card, UPI, SEPA &mdash; plus Envelope&rsquo;s own subscription billing. Fiat customers in, recurring revenue rail out. <span class="mono">lib/dodo/*</span>, <span class="mono">app/api/dodo/webhook</span>.</td></tr>
+      <tr><td>Ika</td><td>The treasury <i>is</i> an MPC dWallet &mdash; no single private key; spending caps and co-sign enforced on-chain. Without it, this is a hot wallet. <span class="mono">lib/ika/*</span>.</td></tr>
+      <tr><td>Encrypt (FHE)</td><td>The compensation policy <i>is</i> encrypted &mdash; a real <span class="mono">#[encrypt_fn]</span> checks &ldquo;is this amount within band?&rdquo; over ciphertexts, so an approver never reads a salary. <span class="mono">programs/envelope-policy/src/lib.rs</span>.</td></tr>
+      <tr><td>Cloak</td><td>Payroll settles as one shielded batch &mdash; 30 payouts, one ledger entry, stealth claim links, scoped viewing keys for audit. Remove it and every salary is public forever. <span class="mono">lib/cloak/*</span>, <span class="mono">app/api/payroll/run</span>, <span class="mono">app/claim/[id]</span>.</td></tr>
+      <tr><td>SNS</td><td><span class="mono">.sol</span> identity: contractors onboard by handle (with verified Records V2 &mdash; gh/tw/dc/email), claim pages greet them by name, and the orchestrator agent has a verifiable on-chain identity via the <span class="mono">payroll-agent.envelope.sol</span> subdomain. <span class="mono">lib/sns/*</span>, <span class="mono">scripts/sns-bootstrap.ts</span>.</td></tr>
+    </table>
+    <p class="note">Each protocol occupies a different structural axis of one product. Pull any out and the loop collapses &mdash; that&rsquo;s the integration-depth answer for every track.</p>
+  </div>
+
+  <!-- TECH / STATUS -->
+  <div class="eyebrow">Under the hood &amp; status</div>
+  <div class="block">
+    <span class="lbl">for judges who&rsquo;ll run it</span>
+    <p><b>Stack:</b> Next.js 14 (App Router, TS strict), <span class="mono">@solana/web3.js</span> v2, Helius RPC, Privy auth · Anchor program <span class="mono">envelope-policy</span> built on the <span class="mono">encrypt-anchor</span> crate · pnpm workspaces. One wrapper module per protocol under <span class="mono">apps/web/lib/&lt;protocol&gt;/</span>; all payroll mutations funnel through <span class="mono">app/api/payroll/run/route.ts</span>.</p>
+    <p><b>On Solana:</b> Cloak shielded transfers run on <b>mainnet</b>; <span class="mono">envelope-policy</span> and the <span class="mono">.sol</span> identity layer are deployed on <b>devnet</b> (<span class="mono">pnpm sns:bootstrap</span> registers <span class="mono">envelope.sol</span> + the agent subdomain); <span class="mono">envelope.sol</span> resolves and the full payroll loop runs against the chain. (Encrypt&rsquo;s FHE compute is pre-alpha — one real <span class="mono">#[encrypt_fn]</span> ships; we&rsquo;re explicit in the README about the pre-alpha plaintext caveat.)</p>
+    <p><b>Run it:</b> <span class="mono">pnpm install && pnpm dev</span> · <span class="mono">pnpm sns:bootstrap</span> for the <span class="mono">.sol</span> identities · README has the per-protocol setup + program IDs.</p>
+  </div>
+
+  <!-- VIDEO -->
+  <div class="eyebrow">The 3-minute video walkthrough</div>
+  <div class="block">
+    <span class="lbl"><a href="https://www.youtube.com/watch?v=0wbhnMgIJ9I">youtube.com/watch?v=0wbhnMgIJ9I</a></span>
+    <p>Opens on the problem &mdash; a salary landing in plaintext on a block explorer &mdash; then walks the loop: a customer pays an invoice from another chain (KIRAPAY) and by card (Dodo) into the dWallet treasury (Ika); the founder sets a compensation policy that gets encrypted (Encrypt); one approval fires payroll as a single shielded batch (Cloak) to 30 contractors identified by their <span class="mono">.sol</span> handles (SNS); a contractor opens their claim link &mdash; &ldquo;Hi, alice.sol &middot; paid by payroll-agent.envelope.sol&rdquo;; the public ledger shows one entry; an auditor opens a scoped viewing key and sees only what they should.</p>
+  </div>
+
+  <p class="copyhint">— select any block and copy. Tweak the deployment line if mainnet coverage has changed since this was generated. —</p>
+
+  <footer>Envelope · Solana Frontier 2026 · generated 2026-05-11 · video: youtube.com/watch?v=0wbhnMgIJ9I</footer>
+</div>
+</body>
+</html>
