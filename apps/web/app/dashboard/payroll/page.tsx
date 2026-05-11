@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/ui/header";
-import { Button, Card, Eyebrow, HRule, Label, Pill } from "@/components/ui/primitives";
+import { Button, Card, Label, Pill } from "@/components/ui/primitives";
 import { ConnectWalletState, EmptyState } from "@/components/ui/empty-state";
+import { Monogram } from "@/components/ui/monogram";
 import { useOrg } from "@/lib/hooks/useOrg";
 import { api } from "@/lib/api/fetcher";
 import type { Contractor, PayrollRunRecord } from "@/lib/store";
@@ -23,7 +24,9 @@ export default function PayrollPage() {
   const [dry, setDry] = useState<DryRun | null>(null);
   const [busy, setBusy] = useState<"dry" | "exec" | null>(null);
   const [result, setResult] = useState<PayrollRunRecord | null>(null);
+  const [armed, setArmed] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const claimRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!pubkey) return;
@@ -35,19 +38,27 @@ export default function PayrollPage() {
       .catch((e: Error) => setErr(e.message));
   }, [pubkey]);
 
-  const totalUsd = useMemo(
-    () => contractors.filter((c) => selected.has(c.id)).reduce((s, c) => s + c.monthlyUsd, 0),
+  const selectedList = useMemo(
+    () => contractors.filter((c) => selected.has(c.id)),
     [contractors, selected],
   );
+  const totalUsd = useMemo(() => selectedList.reduce((s, c) => s + c.monthlyUsd, 0), [selectedList]);
+  const unsealed = useMemo(() => selectedList.filter((c) => !c.encryptCiphertextId).length, [selectedList]);
 
-  if (!connected) {
-    return <Wrap><ConnectWalletState /></Wrap>;
-  }
+  // Disarm the two-step confirm after a few seconds.
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 4500);
+    return () => clearTimeout(t);
+  }, [armed]);
+
+  if (!connected) return <Wrap><ConnectWalletState /></Wrap>;
   if (!org?.name) {
     return (
       <Wrap>
         <EmptyState
-          title="Finish onboarding first"
+          title="Open a workspace first"
+          description="Pick or create a workspace from the dashboard before running payroll."
           action={<Link href="/dashboard"><Button variant="primary">Open dashboard</Button></Link>}
         />
       </Wrap>
@@ -58,7 +69,7 @@ export default function PayrollPage() {
       <Wrap>
         <EmptyState
           title="Add contractors first"
-          description="Payroll needs people. Add the team you want to pay."
+          description="Payroll needs people. Add the team you want to pay, then come back."
           action={<Link href="/dashboard/contractors"><Button variant="primary">+ Add contractors</Button></Link>}
         />
       </Wrap>
@@ -67,10 +78,18 @@ export default function PayrollPage() {
 
   const toggle = (id: string) => {
     const s = new Set(selected);
-    s.has(id) ? s.delete(id) : s.add(id);
+    if (s.has(id)) s.delete(id);
+    else s.add(id);
     setSelected(s);
     setDry(null);
     setResult(null);
+    setArmed(false);
+  };
+  const setAll = (ids: string[]) => {
+    setSelected(new Set(ids));
+    setDry(null);
+    setResult(null);
+    setArmed(false);
   };
 
   const doDry = async () => {
@@ -83,14 +102,18 @@ export default function PayrollPage() {
       });
       setDry(j);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed");
+      setErr(e instanceof Error ? e.message : "Couldn't compute the run");
     } finally {
       setBusy(null);
     }
   };
 
   const doRun = async () => {
-    if (!confirm(`Run payroll for ${selected.size} ${selected.size === 1 ? "person" : "people"}? This fires a real shielded batch.`)) return;
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setArmed(false);
     setBusy("exec");
     setErr(null);
     try {
@@ -100,7 +123,7 @@ export default function PayrollPage() {
       });
       setResult(j);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed");
+      setErr(e instanceof Error ? e.message : "The run failed");
     } finally {
       setBusy(null);
     }
@@ -109,149 +132,299 @@ export default function PayrollPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-6 py-12">
-        <header className="flex items-end justify-between gap-6 flex-wrap">
+      <main className="mx-auto max-w-6xl px-6 py-10">
+        <header className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <Eyebrow>Payroll</Eyebrow>
-            <h1 className="mt-4 font-display text-[42px] leading-none tracking-tighter">
-              Run
+            <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-3">
+              Payroll
+            </span>
+            <h1 className="mt-2.5 font-display text-[34px] leading-none tracking-tighter text-ink">
+              Run payroll
             </h1>
-            <p className="mt-3 text-[14px] text-ink-2">
-              {selected.size} of {contractors.length} selected ·{" "}
-              <span className="num text-ink">${totalUsd.toLocaleString()}</span>
+            <p className="mt-2.5 text-[14px] text-ink-2">
+              Pick who gets paid. One approval settles everyone in a shielded batch — the public
+              ledger sees one entry.
             </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
-            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set(contractors.map((c) => c.id)))}>Select all</Button>
-            <Button variant="secondary" onClick={doDry} disabled={busy !== null || selected.size === 0}>
-              {busy === "dry" ? "Calculating…" : "Dry run"}
-            </Button>
-            <Button variant="primary" onClick={doRun} disabled={busy !== null || !dry}>
-              {busy === "exec" ? "Settling…" : "Send shielded payroll"}
-            </Button>
           </div>
         </header>
 
         {err && (
-          <div className="mt-6 px-4 py-3 rounded border bg-negative-soft text-negative border-negative/30 text-[13px]">
+          <div className="mt-6 rounded-lg border border-negative/30 bg-negative-soft px-4 py-3 text-[13px] text-negative">
             {err}
           </div>
         )}
 
-        <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <Card className="lg:col-span-8 p-0 overflow-hidden">
-            <div className="max-h-[560px] overflow-auto">
-              <table className="w-full text-[13px]">
-                <thead className="text-[11px] uppercase tracking-[0.1em] text-ink-3">
-                  <tr className="border-b border-rule">
-                    <th className="text-left font-medium px-5 py-3 w-8"></th>
-                    <th className="text-left font-medium px-3 py-3">Name</th>
-                    <th className="text-left font-medium px-3 py-3">Country</th>
-                    <th className="text-left font-medium px-3 py-3">Role</th>
-                    <th className="text-left font-medium px-3 py-3">Sealed</th>
-                    <th className="text-right font-medium px-5 py-3">Monthly</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contractors.map((c) => (
-                    <tr key={c.id} onClick={() => toggle(c.id)} className={`cursor-pointer border-b border-rule/60 hover:bg-paper-3 ${selected.has(c.id) ? "bg-paper-3/60" : ""}`}>
-                      <td className="px-5 py-3">
-                        <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} onClick={(e) => e.stopPropagation()} className="accent-accent" />
-                      </td>
-                      <td className="px-3 py-3 text-ink">{c.name}</td>
-                      <td className="px-3 py-3 font-mono text-[12px] text-ink-2">{c.countryCode}</td>
-                      <td className="px-3 py-3 text-ink-2">{c.role}</td>
-                      <td className="px-3 py-3">
-                        {c.encryptCiphertextId ? (
-                          <span className="font-mono text-[11px] text-ink-2" title={c.encryptCiphertextId}>
-                            {c.encryptCiphertextId.slice(0, 4)}…{c.encryptCiphertextId.slice(-4)}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-ink-3">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-right num text-ink">${c.monthlyUsd.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {/* ── Roster ── */}
+          <Card className="overflow-hidden p-0 lg:col-span-8">
+            <div className="flex items-center justify-between border-b border-rule px-5 py-3.5">
+              <div className="flex items-center gap-2 text-[13px]">
+                <span className="text-ink">
+                  {selected.size} of {contractors.length} selected
+                </span>
+                <span className="h-1 w-1 rounded-full bg-ink-4" />
+                <span className="num text-ink-2">${totalUsd.toLocaleString()}</span>
+              </div>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setAll([])}>
+                  Clear
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setAll(contractors.map((c) => c.id))}>
+                  Select all
+                </Button>
+              </div>
             </div>
+            <ul className="max-h-[560px] divide-y divide-rule overflow-auto">
+              {contractors.map((c) => {
+                const on = selected.has(c.id);
+                return (
+                  <li
+                    key={c.id}
+                    onClick={() => toggle(c.id)}
+                    className={`flex cursor-pointer items-center gap-4 border-l-2 px-5 py-3.5 transition-colors ${
+                      on
+                        ? "border-l-accent bg-accent-soft/40"
+                        : "border-l-transparent hover:bg-paper-3/40"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggle(c.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-3.5 w-3.5 shrink-0 accent-accent"
+                    />
+                    <Monogram
+                      seed={c.snsResolvedPubkey || c.id}
+                      label={c.name}
+                      className="h-9 w-9 text-[13px]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] text-ink">{c.name}</span>
+                        {c.snsHandle && (
+                          <span className="rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[10.5px] text-accent-ink">
+                            {c.snsHandle}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2 text-[12px] text-ink-3">
+                        {c.countryCode && <span className="font-mono">{c.countryCode}</span>}
+                        {c.role && (
+                          <>
+                            <span className="h-1 w-1 rounded-full bg-ink-4" />
+                            <span>{c.role}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="hidden w-20 shrink-0 text-right sm:block">
+                      {c.encryptCiphertextId ? (
+                        <span className="text-[11px] text-positive">sealed</span>
+                      ) : (
+                        <span className="text-[11px] text-warning">unsealed</span>
+                      )}
+                    </div>
+                    <div className="num w-24 shrink-0 text-right text-[14px] text-ink">
+                      ${c.monthlyUsd.toLocaleString()}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </Card>
 
-          <div className="lg:col-span-4 space-y-3">
-            {dry && !result && (
-              <Card className="p-5">
-                <Label>Dry run</Label>
-                <div className="mt-3 font-display text-[28px] leading-none num">
-                  ${dry.totalUsd.toLocaleString()}
-                </div>
-                <div className="mt-1 text-[12px] text-ink-2 font-mono num">
-                  {(Number(dry.totalLamports) / 1e9).toFixed(4)} SOL · {dry.chunks} {dry.chunks === 1 ? "tx" : "txs"}
-                </div>
-              </Card>
-            )}
+          {/* ── Run summary ── */}
+          <div className="lg:col-span-4">
+            <div className="lg:sticky lg:top-6">
+              <Card className="relative overflow-hidden p-5">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+                <Label>{result ? (result.cloakStatus === "settled" ? "Settled" : "Approved") : "Run summary"}</Label>
 
-            {result && (
-              <Card className="p-5 shadow-card">
-                <Label>{result.cloakStatus === "settled" ? "Settled" : "Approved"}</Label>
-                <div className="mt-3 font-display text-[28px] leading-none num">
-                  {result.recipients.length}
-                </div>
-                <div className="mt-1 text-[12px] text-ink-3 font-mono">
-                  {result.totalChunks} {result.totalChunks === 1 ? "batch" : "batches"} ·{" "}
-                  {result.cloakStatus === "settled"
-                    ? "shielded on Solana"
-                    : "awaiting mainnet"}
-                </div>
-                {result.policyApproval && (
-                  <div className="mt-3 text-[11px] text-ink-3 font-mono break-all">
-                    on-chain approval ·{" "}
-                    <a
-                      href={`https://solscan.io/tx/${result.policyApproval.signature}?cluster=devnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-accent-ink hover:underline"
-                    >
-                      {result.policyApproval.signature.slice(0, 12)}…
-                    </a>
-                  </div>
+                {!result ? (
+                  <>
+                    <div className="mt-4 space-y-3 text-[13px]">
+                      <Row k="Recipients" v={String(selected.size)} />
+                      <Row k="Gross" v={`$${totalUsd.toLocaleString()}`} strong />
+                      <Row
+                        k="Per Solana batch"
+                        v={dry ? `${dry.chunks} ${dry.chunks === 1 ? "batch" : "batches"}` : "computed on dry run"}
+                        muted={!dry}
+                      />
+                      {dry && (
+                        <Row k="Network fee" v={`≈ ${(Number(dry.totalLamports) / 1e9).toFixed(4)} SOL`} />
+                      )}
+                    </div>
+
+                    {unsealed > 0 && (
+                      <p className="mt-4 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-[12px] text-warning">
+                        {unsealed} selected {unsealed === 1 ? "person is" : "people are"} unsealed —
+                        their amount gets sealed automatically before settlement.
+                      </p>
+                    )}
+
+                    <p className="mt-4 text-[12px] leading-relaxed text-ink-3">
+                      Each recipient gets a one-time stealth claim link. Salary amounts never hit the
+                      public ledger.
+                    </p>
+
+                    <div className="mt-5 space-y-2">
+                      <Button
+                        variant="secondary"
+                        className="w-full"
+                        onClick={doDry}
+                        disabled={busy !== null || selected.size === 0}
+                      >
+                        {busy === "dry" ? "Computing…" : dry ? "Recompute dry run" : "Dry run"}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        className="w-full"
+                        onClick={doRun}
+                        disabled={busy !== null || !dry || selected.size === 0}
+                      >
+                        {busy === "exec"
+                          ? "Settling…"
+                          : armed
+                            ? `Confirm — pay ${selected.size} now`
+                            : "Send shielded payroll →"}
+                      </Button>
+                      {armed && (
+                        <button
+                          onClick={() => setArmed(false)}
+                          className="w-full text-center text-[12px] text-ink-3 hover:text-ink"
+                        >
+                          cancel
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-4 num font-display text-[30px] leading-none text-ink">
+                      {result.recipients.length} paid
+                    </div>
+                    <div className="mt-1.5 text-[12px] text-ink-2">
+                      ${result.totalUsd.toLocaleString()} across {result.totalChunks}{" "}
+                      {result.totalChunks === 1 ? "batch" : "batches"}
+                    </div>
+                    <div className="mt-3">
+                      <Pill tone={result.cloakStatus === "settled" ? "positive" : "warning"}>
+                        {result.cloakStatus === "settled" ? "shielded on Solana" : "awaiting mainnet"}
+                      </Pill>
+                    </div>
+                    {result.policyApproval && (
+                      <div className="mt-4 text-[11.5px] text-ink-3">
+                        on-chain approval ·{" "}
+                        <a
+                          href={`https://solscan.io/tx/${result.policyApproval.signature}?cluster=devnet`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-accent-ink hover:underline"
+                        >
+                          {result.policyApproval.signature.slice(0, 12)}…
+                        </a>
+                      </div>
+                    )}
+                    {result.paidByAgent && (
+                      <div className="mt-2 text-[11.5px] text-ink-3">
+                        signed by <span className="font-mono">{result.paidByAgent}</span>
+                      </div>
+                    )}
+                    <div className="mt-5 space-y-2">
+                      <Button
+                        variant="secondary"
+                        className="w-full"
+                        onClick={() => claimRef.current?.scrollIntoView({ behavior: "smooth" })}
+                      >
+                        View claim links ↓
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full"
+                        onClick={() => {
+                          setResult(null);
+                          setDry(null);
+                        }}
+                      >
+                        Start another run
+                      </Button>
+                    </div>
+                  </>
                 )}
               </Card>
-            )}
+            </div>
           </div>
         </div>
 
         {result && (
-          <>
-            <HRule className="my-12" />
-            <section>
-              <Label>Claim links</Label>
-              <h2 className="mt-3 font-display text-[28px] tracking-tight">{result.recipients.length} recipients</h2>
-              <p className="mt-2 text-[13px] text-ink-2">
-                Share these one-time links with each recipient. They expire on first use.
-              </p>
-              <Card className="mt-6 p-0 overflow-hidden">
-                <ul className="divide-y divide-rule text-[13px]">
-                  {result.recipients.map((r) => (
-                    <li key={r.contractorId} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-3">
-                      <span className="text-ink">{r.name}</span>
-                      <span className="text-right num text-ink">${r.monthlyUsd.toLocaleString()}</span>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(r.claimUrl)}
-                        className="text-[12px] text-accent-ink hover:underline font-mono"
-                      >
-                        copy link
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            </section>
-          </>
+          <section ref={claimRef} className="mt-12">
+            <Label>Claim links</Label>
+            <h2 className="mt-2.5 font-display text-[26px] tracking-tight text-ink">
+              {result.recipients.length} recipients
+            </h2>
+            <p className="mt-2 text-[13px] text-ink-2">
+              Share each link with its recipient. They expire on first use.
+            </p>
+            <Card className="mt-5 overflow-hidden p-0">
+              <ul className="divide-y divide-rule">
+                {result.recipients.map((r) => (
+                  <ClaimRow key={r.contractorId} name={r.name} usd={r.monthlyUsd} url={r.claimUrl} handle={r.snsHandle} />
+                ))}
+              </ul>
+            </Card>
+          </section>
         )}
       </main>
     </>
+  );
+}
+
+function Row({ k, v, strong, muted }: { k: string; v: string; strong?: boolean; muted?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-ink-3">{k}</span>
+      <span
+        className={`num ${strong ? "font-display text-[18px] text-ink" : muted ? "text-[12px] text-ink-3" : "text-ink-2"}`}
+      >
+        {v}
+      </span>
+    </div>
+  );
+}
+
+function ClaimRow({ name, usd, url, handle }: { name: string; usd: number; url: string; handle?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <li className="flex items-center gap-4 px-5 py-3.5">
+      <Monogram seed={url} label={name} className="h-9 w-9 text-[13px]" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[14px] text-ink">{name}</span>
+          {handle && (
+            <span className="rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[10.5px] text-accent-ink">
+              {handle}
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 truncate font-mono text-[11px] text-ink-3">{url}</div>
+      </div>
+      <div className="num w-20 shrink-0 text-right text-[14px] text-ink">${usd.toLocaleString()}</div>
+      <button
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1600);
+          } catch {
+            /* clipboard blocked */
+          }
+        }}
+        className="w-16 shrink-0 text-right text-[12px] text-accent-ink hover:underline"
+      >
+        {copied ? "copied" : "copy"}
+      </button>
+    </li>
   );
 }
 

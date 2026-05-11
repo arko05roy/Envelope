@@ -8,7 +8,7 @@
  *   4. Cloak shielded batch: chunk to 2 outputs/tx, fire transact() per chunk
  *   5. Emit per-recipient claim URLs
  */
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import {
   CLOAK_PROGRAM_ID,
   NATIVE_SOL_MINT,
@@ -22,15 +22,9 @@ import { listContractors, newId, store, type Contractor, type PayrollRunRecord }
 import { sealContractorSalary } from "@/lib/encrypt/client";
 import { approvePayrollBatch, fetchPolicy, hashBatch } from "@/lib/policy/client";
 import { agentHandle } from "@/lib/sns/config";
+import { usdToLamports } from "@/lib/config";
 
-// Demo rate so a 30-recipient batch fits under 1 SOL on devnet.
-// Real deployment settles USDC, not SOL — this conversion goes away.
-const DEMO_RATE_USD_PER_SOL = 500_000;
 const CLOAK_MAX_OUTPUTS_PER_TX = 2;
-
-function usdToLamports(usd: number): bigint {
-  return BigInt(Math.round((usd / DEMO_RATE_USD_PER_SOL) * LAMPORTS_PER_SOL));
-}
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];

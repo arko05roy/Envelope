@@ -5,14 +5,14 @@ import { ArrowRight, Check } from "lucide-react";
 
 const plans = [
   {
-    name: "Pilot",
-    description: "Devnet only. Kick the tires.",
+    name: "Starter",
+    description: "For your first contractors.",
     price: { monthly: 0, annual: 0 },
     features: [
       "Up to 5 contractors",
       "1 payroll batch / month",
-      "Devnet only",
-      "KIRAPAY + Cloak enabled",
+      "Crypto and card pay-ins",
+      "Shielded payouts",
       "Community support",
     ],
     cta: "Open dashboard",
@@ -20,15 +20,15 @@ const plans = [
   },
   {
     name: "Operator",
-    description: "For founders running real payroll.",
+    description: "For teams running payroll every cycle.",
     price: { monthly: 49, annual: 39 },
     features: [
       "Up to 100 contractors",
       "Unlimited shielded batches",
-      "All five sponsor rails",
-      "Encrypted policy + caps",
-      "Scoped audit keys",
-      "Webhooks + REST API",
+      "All pay-in rails — crypto, card, bank",
+      "Encrypted policy and caps",
+      "Scoped review keys",
+      "Webhooks and REST API",
       "Per-batch settlement fee",
     ],
     cta: "Open dashboard",
@@ -41,14 +41,13 @@ const plans = [
     features: [
       "Everything in Operator",
       "Unlimited contractors",
-      "Dedicated Ika node",
+      "Dedicated custody node",
       "Custom on-chain policy",
-      "SLA + dedicated support",
-      "Whitelabeled audit portal",
-      "Priority mainnet flip",
+      "SLA and dedicated support",
+      "Whitelabeled review portal",
       "Custom contracts",
     ],
-    cta: "Talk to founders",
+    cta: "Talk to the team",
     popular: false,
   },
 ];
@@ -70,7 +69,7 @@ export function PricingSection() {
             <span className="text-stroke">batches</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl">
-            Free on devnet. Per-batch on mainnet. No seat tax. No spreadsheet upcharge.
+            Free to start. Per-batch as you grow. No seat tax. No spreadsheet upcharge.
           </p>
         </div>
 
@@ -172,7 +171,7 @@ export function PricingSection() {
 
         {/* Bottom Note */}
         <p className="mt-12 text-center text-sm text-muted-foreground">
-          Every plan ships with shielded batches, MPC custody, and the open-source envelope-policy program.{" "}
+          Every plan ships with shielded batches, multi-party custody, and the open-source policy program.{" "}
           <a href="#" className="underline underline-offset-4 hover:text-foreground transition-colors">
             Compare plans
           </a>

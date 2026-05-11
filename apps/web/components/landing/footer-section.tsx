@@ -10,10 +10,10 @@ const footerLinks = {
     { name: "Pricing", href: "#pricing" },
     { name: "Security", href: "#security" },
   ],
-  Developers: [
-    { name: "Documentation", href: "#developers" },
-    { name: "API Reference", href: "#" },
-    { name: "SDK", href: "#developers" },
+  Resources: [
+    { name: "How it works", href: "#how-it-works" },
+    { name: "Security", href: "#security" },
+    { name: "Pricing", href: "#pricing" },
     { name: "Status", href: "#" },
   ],
   Company: [

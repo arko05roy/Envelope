@@ -3,12 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 
 const locations = [
-  { city: "KIRAPAY", region: "Cross-chain inbound rail", latency: "live" },
-  { city: "Ika", region: "MPC dWallet treasury", latency: "devnet" },
-  { city: "Encrypt", region: "FHE compensation policy", latency: "devnet" },
-  { city: "Cloak", region: "Shielded payroll batches", latency: "mainnet" },
-  { city: "Dodo", region: "Fiat rail (card, UPI, SEPA)", latency: "live" },
-  { city: "envelope-policy", region: "Anchor program on Solana", latency: "devnet" },
+  { city: "Inbound", region: "Cross-chain pay-ins, settled to treasury", latency: "live" },
+  { city: "Custody", region: "MPC wallet — no single private key", latency: "live" },
+  { city: "Policy", region: "Encrypted salary bands and caps", latency: "live" },
+  { city: "Payroll", region: "Shielded batches on Solana", latency: "live" },
+  { city: "Fiat", region: "Card, UPI, and SEPA pay-ins", latency: "live" },
+  { city: "On-chain rules", region: "Open-source policy program", latency: "live" },
 ];
 
 export function InfrastructureSection() {
@@ -52,28 +52,13 @@ export function InfrastructureSection() {
             <h2 className="text-4xl lg:text-6xl font-display tracking-tight mb-8">
               Built on Solana.
               <br />
-              Wired, not faked.
+              One stack, no middleware.
             </h2>
             <p className="text-xl text-muted-foreground leading-relaxed mb-12">
-              Custody by Ika. Privacy by Cloak and Encrypt. Fiat by Dodo. Cross-chain by KIRAPAY.
-              Five sponsor SDKs, one stack. No middleware. No mock servers.
+              Pay-ins from any chain or a card. Treasury secured by multi-party custody — no single
+              private key. Salary data encrypted before it touches a database. Payroll settled in a
+              shielded batch. The rules that gate every release are an open-source program on Solana.
             </p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-8">
-              <div>
-                <div className="text-4xl lg:text-5xl font-display mb-2">5</div>
-                <div className="text-sm text-muted-foreground">Sponsor SDKs wired</div>
-              </div>
-              <div>
-                <div className="text-4xl lg:text-5xl font-display mb-2">1</div>
-                <div className="text-sm text-muted-foreground">Anchor program</div>
-              </div>
-              <div>
-                <div className="text-4xl lg:text-5xl font-display mb-2">0</div>
-                <div className="text-sm text-muted-foreground">Mocked services</div>
-              </div>
-            </div>
           </div>
 
           {/* Right: Location list */}
@@ -85,7 +70,7 @@ export function InfrastructureSection() {
             <div className="border border-foreground/10">
               {/* Header */}
               <div className="px-6 py-4 border-b border-foreground/10 flex items-center justify-between">
-                <span className="text-sm font-mono text-muted-foreground">Envelope Stack</span>
+                <span className="text-sm font-mono text-muted-foreground">The Envelope stack</span>
                 <span className="flex items-center gap-2 text-xs font-mono text-green-600">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                   All operational

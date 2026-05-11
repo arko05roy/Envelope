@@ -58,8 +58,8 @@ export function CtaSection() {
                 </h2>
 
                 <p className="text-xl text-muted-foreground mb-12 leading-relaxed max-w-xl">
-                  Every week you wait, another competitor reads your salary bands off Solscan.
-                  Open the dashboard. Run the demo batch. See the public ledger see nothing.
+                  Every week you wait, another competitor reads your salary bands off the public ledger.
+                  Open the dashboard. Run a payroll batch. Watch the public ledger see nothing.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -78,12 +78,12 @@ export function CtaSection() {
                     variant="outline"
                     className="h-14 px-8 text-base rounded-full border-foreground/20 hover:bg-foreground/5"
                   >
-                    Talk to the founders
+                    Talk to the team
                   </Button>
                 </div>
 
                 <p className="text-sm text-muted-foreground mt-8 font-mono">
-                  Devnet today. Mainnet at flip.
+                  Live on Solana mainnet.
                 </p>
               </div>
 

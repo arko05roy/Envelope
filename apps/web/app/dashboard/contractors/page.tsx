@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/ui/header";
-import { Button, Card, Eyebrow, Label, Pill } from "@/components/ui/primitives";
+import { Button, Card, Pill } from "@/components/ui/primitives";
 import { ConnectWalletState, EmptyState } from "@/components/ui/empty-state";
+import { Monogram } from "@/components/ui/monogram";
+import { NewContractorDialog } from "@/components/flows/new-contractor";
 import { useOrg } from "@/lib/hooks/useOrg";
 import { api } from "@/lib/api/fetcher";
 import type { Contractor } from "@/lib/store";
@@ -12,7 +14,7 @@ import type { Contractor } from "@/lib/store";
 export default function ContractorsPage() {
   const { connected, pubkey, org } = useOrg();
   const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = () => {
@@ -23,6 +25,13 @@ export default function ContractorsPage() {
   };
 
   useEffect(refresh, [pubkey]);
+
+  const stats = useMemo(() => {
+    const monthly = contractors.reduce((s, c) => s + c.monthlyUsd, 0);
+    const countries = new Set(contractors.map((c) => c.countryCode).filter(Boolean)).size;
+    const sealed = contractors.filter((c) => c.encryptCiphertextId).length;
+    return { monthly, countries, sealed };
+  }, [contractors]);
 
   if (!connected) {
     return (
@@ -40,9 +49,13 @@ export default function ContractorsPage() {
         <SiteHeader />
         <main className="mx-auto max-w-3xl px-6 py-32">
           <EmptyState
-            title="Finish onboarding first"
-            description="Set your organization name on the dashboard."
-            action={<Link href="/dashboard"><Button variant="primary">Open dashboard</Button></Link>}
+            title="Open a workspace first"
+            description="Pick or create a workspace from the dashboard, then come back to add the people you pay."
+            action={
+              <Link href="/dashboard">
+                <Button variant="primary">Open dashboard</Button>
+              </Link>
+            }
           />
         </main>
       </>
@@ -63,118 +76,148 @@ export default function ContractorsPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-6xl px-6 py-12">
-        <header className="flex items-end justify-between gap-6 flex-wrap">
+      <main className="mx-auto max-w-6xl px-6 py-10">
+        {/* ── Header ── */}
+        <header className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <Eyebrow>People</Eyebrow>
-            <h1 className="mt-4 font-display text-[42px] leading-none tracking-tighter">
+            <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-3">
+              People
+            </span>
+            <h1 className="mt-2.5 font-display text-[34px] leading-none tracking-tighter text-ink">
               Contractors
             </h1>
-            <p className="mt-3 text-[14px] text-ink-2">
-              {contractors.length === 0
-                ? "Add the people you pay. Compensation values are sealed as ciphertexts on Solana."
-                : `${contractors.length} ${contractors.length === 1 ? "person" : "people"} · `}
-              {contractors.length > 0 && (
-                <span className="num">
-                  ${contractors.reduce((s, c) => s + c.monthlyUsd, 0).toLocaleString()}/month
-                </span>
-              )}
+            <p className="mt-2.5 text-[14px] text-ink-2">
+              The roster payroll runs against. Every monthly figure is sealed as a ciphertext on
+              Solana.
             </p>
           </div>
-          <Button variant="primary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? "Cancel" : "+ Add contractor"}
+          <Button variant="primary" onClick={() => setShowDialog(true)}>
+            + Add contractor
           </Button>
         </header>
 
+        {/* ── Stat strip ── */}
+        <div className="mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-rule bg-rule sm:grid-cols-4">
+          <StatCell label="People" value={String(contractors.length)} />
+          <StatCell label="Monthly" value={`$${stats.monthly.toLocaleString()}`} />
+          <StatCell label="Countries" value={String(stats.countries)} />
+          <StatCell
+            label="Sealed"
+            value={`${stats.sealed}/${contractors.length || 0}`}
+            tone={
+              contractors.length > 0 && stats.sealed === contractors.length ? "positive" : "default"
+            }
+          />
+        </div>
+
         {error && (
-          <div className="mt-6 px-4 py-3 rounded border bg-negative-soft text-negative border-negative/30 text-[13px]">
+          <div className="mt-6 rounded-lg border border-negative/30 bg-negative-soft px-4 py-3 text-[13px] text-negative">
             {error}
           </div>
         )}
 
-        {showForm && (
-          <div className="mt-8">
-            <ContractorForm
-              onCreated={() => {
-                setShowForm(false);
-                refresh();
-              }}
-            />
-          </div>
+        {showDialog && (
+          <NewContractorDialog
+            onClose={() => setShowDialog(false)}
+            onCreated={(c) => setContractors((cur) => [...cur, c])}
+          />
         )}
 
-        <div className="mt-10">
-          {contractors.length === 0 && !showForm ? (
+        {/* ── Roster ── */}
+        <div className="mt-8">
+          {contractors.length === 0 ? (
             <Card>
               <EmptyState
                 title="No contractors yet"
-                description="Add your first contractor to begin running payroll."
-                action={<Button variant="primary" onClick={() => setShowForm(true)}>+ Add contractor</Button>}
+                description="Add the people you pay — by .sol handle or by wallet. You'll run payroll against this roster."
+                action={
+                  <Button variant="primary" onClick={() => setShowDialog(true)}>
+                    + Add contractor
+                  </Button>
+                }
               />
             </Card>
           ) : (
-            contractors.length > 0 && (
-              <Card className="p-0 overflow-hidden">
-                <table className="w-full text-[13px]">
-                  <thead className="text-[11px] uppercase tracking-[0.1em] text-ink-3">
-                    <tr className="border-b border-rule">
-                      <th className="text-left font-medium px-5 py-3">Name</th>
-                      <th className="text-left font-medium px-3 py-3">Country</th>
-                      <th className="text-left font-medium px-3 py-3">Role</th>
-                      <th className="text-left font-medium px-3 py-3">Sealed</th>
-                      <th className="text-right font-medium px-3 py-3">Monthly</th>
-                      <th className="text-right font-medium px-5 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contractors.map((c) => (
-                      <tr key={c.id} className="border-b border-rule/60">
-                        <td className="px-5 py-3">
-                          <div className="text-ink flex items-center gap-2">
-                            {c.name}
-                            {c.snsHandle && (
-                              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-rule text-ink-2">
-                                {c.snsHandle}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-ink-3 font-mono flex items-center gap-2">
-                            <span>{c.email}</span>
-                            {c.snsRecords?.github && <span title="SNS Github record">· gh ✓</span>}
-                            {c.snsRecords?.twitter && <span title="SNS Twitter record">· tw ✓</span>}
-                            {c.snsRecords?.discord && <span title="SNS Discord record">· dc ✓</span>}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 font-mono text-[12px] text-ink-2">{c.countryCode}</td>
-                        <td className="px-3 py-3 text-ink-2">{c.role}</td>
-                        <td className="px-3 py-3">
-                          {c.encryptCiphertextId ? (
-                            <span className="font-mono text-[11px] text-ink-2">
-                              {c.encryptCiphertextId.slice(0, 4)}…{c.encryptCiphertextId.slice(-4)}
-                            </span>
-                          ) : (
-                            <button onClick={() => reseal(c.id)} className="text-[12px] text-ink-3 hover:text-ink underline underline-offset-2">
-                              seal
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-right num text-ink">
-                          ${c.monthlyUsd.toLocaleString()}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={() => remove(c.id)}
-                            className="text-[12px] text-ink-3 hover:text-negative"
-                          >
-                            remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Card>
-            )
+            <Card className="overflow-hidden p-0">
+              <ul className="divide-y divide-rule">
+                {contractors.map((c) => (
+                  <li
+                    key={c.id}
+                    className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-paper-3/40"
+                  >
+                    <Monogram
+                      seed={c.snsResolvedPubkey || c.id}
+                      label={c.name}
+                      className="h-10 w-10 text-[14px]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[14px] text-ink">{c.name}</span>
+                        {c.snsHandle && (
+                          <span className="rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[10.5px] text-accent-ink">
+                            {c.snsHandle}
+                          </span>
+                        )}
+                        {c.snsRecords?.github && <RecordTick label="gh" />}
+                        {c.snsRecords?.twitter && <RecordTick label="tw" />}
+                        {c.snsRecords?.discord && <RecordTick label="dc" />}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-ink-3">
+                        <span className="font-mono">{c.email}</span>
+                        {c.countryCode && (
+                          <>
+                            <span className="h-1 w-1 rounded-full bg-ink-4" />
+                            <span className="font-mono">{c.countryCode}</span>
+                          </>
+                        )}
+                        {c.role && (
+                          <>
+                            <span className="h-1 w-1 rounded-full bg-ink-4" />
+                            <span>{c.role}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* sealed status */}
+                    <div className="hidden w-28 shrink-0 text-right sm:block">
+                      {c.encryptCiphertextId ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 text-[11.5px] text-positive"
+                          title={c.encryptCiphertextId}
+                        >
+                          <LockGlyph /> sealed
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => reseal(c.id)}
+                          className="text-[11.5px] text-warning underline underline-offset-2 hover:text-ink"
+                        >
+                          seal now
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="w-24 shrink-0 text-right">
+                      <div className="num text-[14px] text-ink">
+                        ${c.monthlyUsd.toLocaleString()}
+                      </div>
+                      <div className="text-[11px] text-ink-3">/ month</div>
+                    </div>
+
+                    <div className="flex w-16 shrink-0 justify-end opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        onClick={() => remove(c.id)}
+                        className="text-[12px] text-ink-3 transition-colors hover:text-negative"
+                        title="Remove contractor"
+                      >
+                        remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
         </div>
       </main>
@@ -182,146 +225,44 @@ export default function ContractorsPage() {
   );
 }
 
-function ContractorForm({ onCreated }: { onCreated: () => void }) {
-  const { pubkey } = useOrg();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [countryCode, setCountryCode] = useState("");
-  const [role, setRole] = useState("");
-  const [monthlyUsd, setMonthlyUsd] = useState("");
-  const [snsHandle, setSnsHandle] = useState("");
-  const [snsState, setSnsState] = useState<
-    | { status: "idle" }
-    | { status: "checking" }
-    | { status: "ok"; pubkey: string; cluster: "mainnet" | "devnet" }
-    | { status: "missing" }
-    | { status: "invalid" }
-  >({ status: "idle" });
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  // Debounced live SNS resolution preview.
-  useEffect(() => {
-    const h = snsHandle.trim().toLowerCase();
-    if (!h) return setSnsState({ status: "idle" });
-    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)*\.sol$/.test(h)) {
-      return setSnsState({ status: "invalid" });
-    }
-    setSnsState({ status: "checking" });
-    const ctrl = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(`/api/sns/resolve?handle=${encodeURIComponent(h)}`, {
-          signal: ctrl.signal,
-        });
-        const j = (await r.json()) as { resolved: { pubkey: string; cluster: "mainnet" | "devnet" } | null };
-        if (j.resolved) setSnsState({ status: "ok", ...j.resolved });
-        else setSnsState({ status: "missing" });
-      } catch {
-        // aborted
-      }
-    }, 350);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
-  }, [snsHandle]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    try {
-      const trimmed = snsHandle.trim().toLowerCase();
-      await api(pubkey, "/api/contractors", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          email,
-          countryCode: countryCode.toUpperCase(),
-          role,
-          monthlyUsd: Number(monthlyUsd),
-          ...(trimmed ? { snsHandle: trimmed } : {}),
-        }),
-      });
-      onCreated();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card className="p-6">
-      <Label>New contractor</Label>
-      <form onSubmit={submit} className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Full name" value={name} onChange={setName} placeholder="Asha Patel" />
-        <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="asha@acme.com" />
-        <Field label="Country code" value={countryCode} onChange={setCountryCode} placeholder="IN" maxLength={3} />
-        <Field label="Role" value={role} onChange={setRole} placeholder="Engineer" />
-        <Field label="Monthly USD" value={monthlyUsd} onChange={setMonthlyUsd} type="number" placeholder="6000" />
-        <label className="block">
-          <Label>.sol handle (optional)</Label>
-          <input
-            type="text"
-            value={snsHandle}
-            onChange={(e) => setSnsHandle(e.target.value)}
-            placeholder="asha.sol"
-            className="mt-2 w-full h-10 px-3 text-[14px] bg-paper border border-rule rounded focus:border-rule-strong focus:outline-none focus:ring-2 focus:ring-accent/20"
-          />
-          <div className="mt-1 text-[11px] font-mono">
-            {snsState.status === "idle" && (
-              <span className="text-ink-3">Identity via Solana Name Service. Records V2 (email/twitter/github) auto-imported.</span>
-            )}
-            {snsState.status === "checking" && <span className="text-ink-3">resolving…</span>}
-            {snsState.status === "invalid" && <span className="text-negative">invalid handle</span>}
-            {snsState.status === "missing" && <span className="text-ink-3">not registered</span>}
-            {snsState.status === "ok" && (
-              <span className="text-positive">
-                ✓ {snsState.pubkey.slice(0, 4)}…{snsState.pubkey.slice(-4)} ({snsState.cluster})
-              </span>
-            )}
-          </div>
-        </label>
-        {err && <div className="sm:col-span-2 text-[13px] text-negative">{err}</div>}
-        <div className="sm:col-span-2 flex gap-2">
-          <Button type="submit" variant="primary" disabled={busy}>
-            {busy ? "Adding…" : "Add contractor"}
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-}
-
-function Field({
+function StatCell({
   label,
   value,
-  onChange,
-  type = "text",
-  placeholder,
-  maxLength,
+  tone = "default",
 }: {
   label: string;
   value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  placeholder?: string;
-  maxLength?: number;
+  tone?: "default" | "positive";
 }) {
   return (
-    <label className="block">
-      <Label>{label}</Label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        required
-        className="mt-2 w-full h-10 px-3 text-[14px] bg-paper border border-rule rounded focus:border-rule-strong focus:outline-none focus:ring-2 focus:ring-accent/20"
-      />
-    </label>
+    <div className="bg-paper-2 px-5 py-4">
+      <div className="text-[10.5px] uppercase tracking-[0.14em] text-ink-3">{label}</div>
+      <div
+        className={`num mt-1.5 font-display text-[20px] leading-none ${tone === "positive" ? "text-positive" : "text-ink"}`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function RecordTick({ label }: { label: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 rounded bg-paper-3 px-1 py-0.5 font-mono text-[10px] text-ink-2"
+      title={`SNS ${label} record`}
+    >
+      {label}
+      <span className="text-positive">✓</span>
+    </span>
+  );
+}
+
+function LockGlyph() {
+  return (
+    <svg viewBox="0 0 14 14" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <rect x="2.5" y="6" width="9" height="6.5" rx="1" />
+      <path d="M4.5 6 V4 a2.5 2.5 0 0 1 5 0 V6" />
+    </svg>
   );
 }

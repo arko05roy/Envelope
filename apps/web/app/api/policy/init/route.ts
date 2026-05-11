@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { authResponse, requireWalletPubkey } from "@/lib/auth";
 import { fetchPolicy, initPolicy } from "@/lib/policy/client";
+import { usdToLamports } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,11 +12,6 @@ const Body = z.object({
   monthlyCapUsd: z.number().int().positive().max(10_000_000),
   cosigners: z.number().int().min(1).max(8).default(1),
 });
-
-const DEMO_RATE_USD_PER_SOL = 500_000;
-function usdToLamports(usd: number): bigint {
-  return BigInt(Math.round((usd / DEMO_RATE_USD_PER_SOL) * 1_000_000_000));
-}
 
 export async function POST(req: Request) {
   try {

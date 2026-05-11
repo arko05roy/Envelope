@@ -8,14 +8,9 @@ import { authResponse, requireWalletPubkey } from "@/lib/auth";
 import { getOrCreateOrg, store } from "@/lib/store";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { fetchPolicy, initPolicy } from "@/lib/policy/client";
+import { DEFAULT_MONTHLY_CAP_USD, usdToLamports } from "@/lib/config";
 
 export const runtime = "nodejs";
-
-const DEMO_RATE_USD_PER_SOL = 500_000;
-const DEFAULT_CAP_USD = 100_000;
-function usdToLamports(usd: number): bigint {
-  return BigInt(Math.round((usd / DEMO_RATE_USD_PER_SOL) * 1_000_000_000));
-}
 
 export async function GET(req: Request) {
   try {
@@ -62,7 +57,7 @@ export async function PATCH(req: Request) {
           await initPolicy({
             connection: conn,
             owner,
-            monthlyCapLamports: usdToLamports(DEFAULT_CAP_USD),
+            monthlyCapLamports: usdToLamports(DEFAULT_MONTHLY_CAP_USD),
             cosigners: 1,
           });
         }

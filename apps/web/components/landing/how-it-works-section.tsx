@@ -5,35 +5,45 @@ import { useEffect, useRef, useState } from "react";
 const steps = [
   {
     number: "I",
-    title: "Connect your stack",
-    description: "Wire KIRAPAY for inbound, Ika for treasury, Cloak for outbound. Three SDKs, one weekend.",
-    code: `import { envelope } from '@envelope/core'
-
-envelope.connect({
-  rails: ['kirapay', 'ika', 'cloak'],
-  network: 'solana'
-})`,
+    title: "Connect your treasury",
+    description:
+      "Bring your wallet and your contractor roster. Funds land from any chain or a card, and settle into one treasury you control.",
+    panel: {
+      heading: "Treasury",
+      rows: [
+        { label: "Inbound", value: "Any chain · card · bank" },
+        { label: "Custody", value: "MPC, no single key" },
+        { label: "Roster", value: "Contractors across countries" },
+      ],
+    },
   },
   {
     number: "II",
-    title: "Define the policy",
-    description: "Salary bands, caps, and co-signers. Encrypted before they ever touch a database. Auditors get scoped keys, not vault access.",
-    code: `envelope.policy.set({
-  bands: encrypted,
-  cap: { weekly: 250_000 },
-  cosign: ['cfo', 'ceo']
-})`,
+    title: "Set the policy",
+    description:
+      "Salary bands, monthly caps, and co-signers. Compensation figures are encrypted before they touch a database. Reviewers get scoped keys, never the vault.",
+    panel: {
+      heading: "Policy",
+      rows: [
+        { label: "Salary bands", value: "Encrypted" },
+        { label: "Monthly cap", value: "Enforced on-chain" },
+        { label: "Co-signers", value: "Required to release" },
+      ],
+    },
   },
   {
     number: "III",
-    title: "Run the batch",
-    description: "30 payments. One shielded transaction. Eight seconds. The public ledger sees a single entry. Your team gets paid.",
-    code: `envelope.payroll.run({
-  shielded: true,
-  recipients: roster
-})
-
-// Settled in 7.2s`,
+    title: "Run payroll",
+    description:
+      "Approve once. Every contractor is paid in a single shielded batch. The public ledger shows one entry — no names, no amounts, no roster.",
+    panel: {
+      heading: "Payroll run",
+      rows: [
+        { label: "Approval", value: "One signature" },
+        { label: "Settlement", value: "Shielded batch on Solana" },
+        { label: "Public ledger", value: "Sees nothing" },
+      ],
+    },
   },
 ];
 
@@ -61,6 +71,8 @@ export function HowItWorksSection() {
     return () => clearInterval(interval);
   }, []);
 
+  const active = steps[activeStep];
+
   return (
     <section
       id="how-it-works"
@@ -69,15 +81,18 @@ export function HowItWorksSection() {
     >
       {/* Diagonal lines pattern */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 40px,
-            currentColor 40px,
-            currentColor 41px
-          )`
-        }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 40px,
+              currentColor 40px,
+              currentColor 41px
+            )`,
+          }}
+        />
       </div>
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12">
@@ -85,7 +100,7 @@ export function HowItWorksSection() {
         <div className="mb-16 lg:mb-24">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-background/50 mb-6">
             <span className="w-8 h-px bg-background/30" />
-            Process
+            How it works
           </span>
           <h2
             className={`text-4xl lg:text-6xl font-display tracking-tight transition-all duration-700 ${
@@ -117,18 +132,14 @@ export function HowItWorksSection() {
                     <h3 className="text-2xl lg:text-3xl font-display mb-3 group-hover:translate-x-2 transition-transform duration-300">
                       {step.title}
                     </h3>
-                    <p className="text-background/60 leading-relaxed">
-                      {step.description}
-                    </p>
-                    
+                    <p className="text-background/60 leading-relaxed">{step.description}</p>
+
                     {/* Progress indicator */}
                     {activeStep === index && (
                       <div className="mt-4 h-px bg-background/20 overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-background w-0"
-                          style={{
-                            animation: 'progress 5s linear forwards'
-                          }}
+                          style={{ animation: "progress 5s linear forwards" }}
                         />
                       </div>
                     )}
@@ -138,53 +149,48 @@ export function HowItWorksSection() {
             ))}
           </div>
 
-          {/* Code display */}
+          {/* Visual panel */}
           <div className="lg:sticky lg:top-32 self-start">
             <div className="border border-background/10 overflow-hidden">
-              {/* Window header */}
+              {/* Header */}
               <div className="px-6 py-4 border-b border-background/10 flex items-center justify-between">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-background/20" />
-                  <div className="w-3 h-3 rounded-full bg-background/20" />
-                  <div className="w-3 h-3 rounded-full bg-background/20" />
-                </div>
-                <span className="text-xs font-mono text-background/40">payroll.ts</span>
+                <span className="text-sm font-mono text-background/40">
+                  Step {active.number} — {active.panel.heading}
+                </span>
+                <span className="flex items-center gap-2 text-xs font-mono text-background/40">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  Live
+                </span>
               </div>
 
-              {/* Code content */}
-              <div className="p-8 font-mono text-sm min-h-[280px]">
-                <pre className="text-background/70">
-                  {steps[activeStep].code.split('\n').map((line, lineIndex) => (
-                    <div 
-                      key={`${activeStep}-${lineIndex}`} 
-                      className="leading-loose code-line-reveal"
-                      style={{ 
-                        animationDelay: `${lineIndex * 80}ms`,
-                      }}
+              {/* Rows */}
+              <div className="p-8 min-h-[280px] flex flex-col justify-center">
+                <div className="space-y-px">
+                  {active.panel.rows.map((row, i) => (
+                    <div
+                      key={`${active.number}-${row.label}`}
+                      className="panel-row-reveal flex items-center justify-between gap-6 py-5 border-b border-background/10 last:border-b-0"
+                      style={{ animationDelay: `${i * 90}ms` }}
                     >
-                      <span className="text-background/20 select-none w-8 inline-block">{lineIndex + 1}</span>
-                      <span className="inline-flex">
-                        {line.split('').map((char, charIndex) => (
-                          <span
-                            key={`${activeStep}-${lineIndex}-${charIndex}`}
-                            className="code-char-reveal"
-                            style={{
-                              animationDelay: `${lineIndex * 80 + charIndex * 15}ms`,
-                            }}
-                          >
-                            {char === ' ' ? '\u00A0' : char}
-                          </span>
-                        ))}
+                      <span className="text-sm text-background/40 font-mono">{row.label}</span>
+                      <span className="text-lg lg:text-xl font-display text-background text-right">
+                        {row.value}
                       </span>
                     </div>
                   ))}
-                </pre>
+                </div>
               </div>
 
-              {/* Status */}
-              <div className="px-6 py-4 border-t border-background/10 flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs font-mono text-background/40">Ready</span>
+              {/* Footer dots */}
+              <div className="px-6 py-4 border-t border-background/10 flex items-center gap-2">
+                {steps.map((s, i) => (
+                  <span
+                    key={s.number}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === activeStep ? "w-8 bg-background" : "w-1.5 bg-background/20"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -193,33 +199,24 @@ export function HowItWorksSection() {
 
       <style jsx>{`
         @keyframes progress {
-          from { width: 0%; }
-          to { width: 100%; }
+          from {
+            width: 0%;
+          }
+          to {
+            width: 100%;
+          }
         }
-        
-        .code-line-reveal {
+
+        .panel-row-reveal {
           opacity: 0;
           transform: translateX(-8px);
-          animation: lineReveal 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          animation: rowReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
-        
-        @keyframes lineReveal {
+
+        @keyframes rowReveal {
           to {
             opacity: 1;
             transform: translateX(0);
-          }
-        }
-        
-        .code-char-reveal {
-          opacity: 0;
-          filter: blur(8px);
-          animation: charReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        
-        @keyframes charReveal {
-          to {
-            opacity: 1;
-            filter: blur(0);
           }
         }
       `}</style>

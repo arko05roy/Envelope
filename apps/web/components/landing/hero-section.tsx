@@ -139,37 +139,6 @@ export function HeroSection() {
         </div>
         
       </div>
-      
-      {/* Stats marquee - full width outside container */}
-      <div 
-        className={`absolute bottom-24 left-0 right-0 transition-all duration-700 delay-500 ${
-          isVisible ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div className="flex gap-16 marquee whitespace-nowrap">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="flex gap-16">
-              {[
-                { value: "30", label: "contractors paid in one batch", company: "ENVELOPE PAYROLL" },
-                { value: "12", label: "countries, one approval", company: "GLOBAL ROSTER" },
-                { value: "$0", label: "salary data on a public ledger", company: "CLOAK SHIELDED" },
-                { value: "<8s", label: "from approval to settled", company: "SOLANA RAIL" },
-              ].map((stat) => (
-                <div key={`${stat.company}-${i}`} className="flex items-baseline gap-4">
-                  <span className="text-4xl lg:text-5xl font-display">{stat.value}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {stat.label}
-                    <span className="block font-mono text-xs mt-1">{stat.company}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Scroll indicator */}
-      
     </section>
   );
 }

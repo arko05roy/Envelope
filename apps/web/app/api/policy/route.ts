@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { authResponse, requireWalletPubkey } from "@/lib/auth";
 import { fetchPolicy, initPolicy } from "@/lib/policy/client";
+import { lamportsToUsd, USD_PER_SOL } from "@/lib/config";
 
 export const runtime = "nodejs";
 
@@ -27,10 +28,13 @@ export async function GET(req: Request) {
         dwallet: policy.dwallet.toBase58(),
         dwalletBound: !policy.dwallet.equals(PublicKey.default),
         monthlyCapLamports: policy.monthlyCapLamports.toString(),
+        monthlyCapUsd: lamportsToUsd(policy.monthlyCapLamports),
         cosignersRequired: policy.cosignersRequired,
         batchesApproved: policy.batchesApproved.toString(),
         lamportsApprovedThisPeriod: policy.lamportsApprovedThisPeriod.toString(),
+        spentUsdThisPeriod: lamportsToUsd(policy.lamportsApprovedThisPeriod),
         periodStartUnix: policy.periodStartUnix.toString(),
+        usdPerSol: USD_PER_SOL,
       },
     });
   } catch (e) {

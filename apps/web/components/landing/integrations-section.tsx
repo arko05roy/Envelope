@@ -3,19 +3,18 @@
 import { useEffect, useState, useRef } from "react";
 
 const integrations = [
-  { name: "KIRAPAY", category: "Cross-chain rail" },
-  { name: "Ika", category: "MPC dWallet" },
-  { name: "Encrypt", category: "FHE policy" },
-  { name: "Cloak", category: "Shielded transfers" },
-  { name: "SNS", category: ".sol identity" },
-  { name: "Dodo", category: "Fiat on-ramp" },
   { name: "Solana", category: "Settlement layer" },
-  { name: "Helius", category: "RPC" },
+  { name: "KIRAPAY", category: "Cross-chain pay-ins" },
+  { name: "Dodo", category: "Card, UPI & SEPA" },
+  { name: "Ika", category: "Multi-party custody" },
+  { name: "Cloak", category: "Shielded transfers" },
+  { name: "Encrypt", category: "Encrypted policy" },
+  { name: "SNS", category: ".sol identity" },
   { name: "Phantom", category: "Wallet" },
-  { name: "Privy", category: "Auth" },
-  { name: "Anchor", category: "Program framework" },
-  { name: "Jupiter", category: "Liquidity" },
-  { name: "Jito", category: "MEV bundles" },
+  { name: "Privy", category: "Sign-in" },
+  { name: "Helius", category: "Network access" },
+  { name: "Anchor", category: "On-chain rules" },
+  { name: "Jupiter", category: "Liquidity routing" },
 ];
 
 export function IntegrationsSection() {
@@ -49,12 +48,12 @@ export function IntegrationsSection() {
             <span className="w-8 h-px bg-foreground/30" />
           </span>
           <h2 className="text-4xl lg:text-6xl font-display tracking-tight mb-6">
-            The stack we wired,
+            Built on the best
             <br />
-            not faked.
+            of Solana.
           </h2>
           <p className="text-xl text-muted-foreground">
-            Each integration is real. Each is on devnet today, mainnet at flip.
+            Custody, privacy, payments, identity — connected, not bolted on. Running on Solana mainnet.
           </p>
         </div>
 
